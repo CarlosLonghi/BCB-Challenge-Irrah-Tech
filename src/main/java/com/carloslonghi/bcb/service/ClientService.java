@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.service;
 
+import com.carloslonghi.bcb.dto.ClientBalanceDTO;
 import com.carloslonghi.bcb.dto.ClientDTO;
 import com.carloslonghi.bcb.mapper.ClientMapper;
 import com.carloslonghi.bcb.model.Client;
@@ -52,5 +53,12 @@ public class ClientService {
             return clientMapper.toDTO(client);
         }
         return null;
+    }
+
+    public ClientBalanceDTO getClientBalance(Long id) {
+        return clientRepository.findById(id)
+                .map(client ->
+                        new ClientBalanceDTO(client.getBalance(), client.getLimit())
+                ).orElse(null);
     }
 }

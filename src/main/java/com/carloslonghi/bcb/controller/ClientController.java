@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.controller;
 
+import com.carloslonghi.bcb.dto.ClientBalanceDTO;
 import com.carloslonghi.bcb.dto.ClientDTO;
 import com.carloslonghi.bcb.service.ClientService;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,20 @@ public class ClientController {
             return ResponseEntity
                     .ok(clientUpdated);
         }
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("Cliente com id " + id + " não encontrado");
+    }
+
+    @GetMapping("/clients/{id}/balance")
+    public ResponseEntity<?> getClientBalance(@PathVariable Long id) {
+        ClientDTO clientFound = clientService.findById(id);
+        if (clientFound != null) {
+            ClientBalanceDTO balance = clientService.getClientBalance(id);
+            return ResponseEntity.ok(balance);
+        }
+
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body("Cliente com id " + id + " não encontrado");
