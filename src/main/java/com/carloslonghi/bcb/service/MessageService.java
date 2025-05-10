@@ -1,0 +1,91 @@
+package com.carloslonghi.bcb.service;
+
+import com.carloslonghi.bcb.dto.MessageRequestDTO;
+import com.carloslonghi.bcb.dto.MessageResponseDTO;
+import com.carloslonghi.bcb.mapper.MessageRequestMapper;
+import com.carloslonghi.bcb.mapper.MessageResponseMapper;
+import com.carloslonghi.bcb.model.Client;
+import com.carloslonghi.bcb.model.Conversation;
+import com.carloslonghi.bcb.model.Message;
+import com.carloslonghi.bcb.model.enums.ClientPlanType;
+import com.carloslonghi.bcb.model.enums.MessagePriority;
+import com.carloslonghi.bcb.repository.ClientRepository;
+import com.carloslonghi.bcb.repository.ConversationRepository;
+import com.carloslonghi.bcb.repository.MessageRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class MessageService {
+    private final MessageRepository messageRepository;
+    private final ConversationRepository conversationRepository;
+    private final ClientRepository clientRepository;
+
+    private final MessageRequestMapper messageRequestMapper;
+    private final MessageResponseMapper messageResponseMapper;
+
+    public MessageResponseDTO sendMessage(MessageRequestDTO dto) {
+        Long senderId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        Client sender = clientRepository.findById(senderId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Remetente invalido"));
+
+        Conversation conversation;
+
+        if (dto.getConversationId() != null) {
+            // Busca conversa existente
+            conversation = conversationRepository.findById(dto.getConversationId())
+                    .orElseThrow(() -> new RuntimeException("Conversa não encontrada"));
+        } else {
+            // Cria nova conversa
+            Conversation newConversation = new Conversation();
+            newConversation.setClient(sender);
+            newConversation.setRecipientId(dto.getRecipientId());
+            newConversation.setRecipientName(dto.getRecipientName());
+            newConversation.setLastMessageContent(dto.getContent());
+            newConversation.setLastMessageTime(LocalDateTime.now());
+            newConversation.setUnreadCount(1);
+            conversation = conversationRepository.save(newConversation);
+        }
+
+        // Define custo da mensagem
+        BigDecimal cost = dto.getPriority() == MessagePriority.URGENT
+                ? new BigDecimal("0.50")
+                : new BigDecimal("0.25");
+
+        // Define debito de saldo caso pre-pago
+        BigDecimal currentBalance = null;
+        if (sender.getPlanType() == ClientPlanType.PRE_PAID) {
+            if (sender.getBalance().compareTo(cost) < 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.PAYMENT_REQUIRED, "Saldo insuficiente");
+            }
+            currentBalance = sender.getBalance().subtract(cost);
+            sender.setBalance(currentBalance);
+            clientRepository.save(sender);
+        }
+
+        // Cria mensagem
+        LocalDateTime createdAt = LocalDateTime.now();
+        Message message = messageRequestMapper.toModel(dto, sender, conversation, cost, createdAt);
+
+        message = messageRepository.save(message);
+
+        // Atualiza conversa
+        conversation.setLastMessageContent(dto.getContent());
+        conversation.setLastMessageTime(message.getCreatedAt());
+        conversation.setUnreadCount(conversation.getUnreadCount() + 1);
+        conversationRepository.save(conversation);
+
+        return messageResponseMapper.toDTO(message, currentBalance);
+    }
+}
