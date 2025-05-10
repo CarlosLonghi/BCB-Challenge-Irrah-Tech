@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MessageService {
+
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final ClientRepository clientRepository;
@@ -59,7 +60,7 @@ public class MessageService {
             newConversation.setRecipientName(dto.getRecipientName());
             newConversation.setLastMessageContent(dto.getContent());
             newConversation.setLastMessageTime(LocalDateTime.now());
-            newConversation.setUnreadCount(1);
+            newConversation.setUnreadCount(0);
             conversation = conversationRepository.save(newConversation);
         }
 
@@ -111,7 +112,7 @@ public class MessageService {
                 .getAuthentication().getPrincipal();
 
         Message message = messageRepository.findById(id)
-                .filter(m -> m.getSender().getId().equals(authId))
+                .filter(msg -> msg.getSender().getId().equals(authId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
 
         return messageMapper.toDTO(message);
@@ -122,7 +123,7 @@ public class MessageService {
                 .getAuthentication().getPrincipal();
 
         Message message = messageRepository.findById(id)
-                .filter(m -> m.getSender().getId().equals(authId))
+                .filter(msg -> msg.getSender().getId().equals(authId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
 
         return message.getStatus();
