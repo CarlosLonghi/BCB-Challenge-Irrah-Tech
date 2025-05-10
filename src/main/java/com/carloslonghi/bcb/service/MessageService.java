@@ -4,8 +4,6 @@ import com.carloslonghi.bcb.dto.MessageDTO;
 import com.carloslonghi.bcb.dto.MessageRequestDTO;
 import com.carloslonghi.bcb.dto.MessageResponseDTO;
 import com.carloslonghi.bcb.mapper.MessageMapper;
-import com.carloslonghi.bcb.mapper.MessageRequestMapper;
-import com.carloslonghi.bcb.mapper.MessageResponseMapper;
 import com.carloslonghi.bcb.model.Client;
 import com.carloslonghi.bcb.model.Conversation;
 import com.carloslonghi.bcb.model.Message;
@@ -35,8 +33,6 @@ public class MessageService {
     private final ClientRepository clientRepository;
 
     private final MessageMapper messageMapper;
-    private final MessageRequestMapper messageRequestMapper;
-    private final MessageResponseMapper messageResponseMapper;
 
     public MessageResponseDTO sendMessage(MessageRequestDTO dto) {
         Long senderId = (Long) SecurityContextHolder.getContext()
@@ -83,7 +79,7 @@ public class MessageService {
 
         // Cria mensagem
         LocalDateTime createdAt = LocalDateTime.now();
-        Message message = messageRequestMapper.toModel(dto, sender, conversation, cost, createdAt);
+        Message message = messageMapper.toRequestModel(dto, sender, conversation, cost, createdAt);
 
         message = messageRepository.save(message);
 
@@ -93,7 +89,7 @@ public class MessageService {
         conversation.setUnreadCount(conversation.getUnreadCount() + 1);
         conversationRepository.save(conversation);
 
-        return messageResponseMapper.toDTO(message, currentBalance);
+        return messageMapper.toResponseDTO(message, currentBalance);
     }
 
     public List<MessageDTO> findAll() {

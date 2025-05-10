@@ -4,8 +4,6 @@ import com.carloslonghi.bcb.dto.ClientDTO;
 import com.carloslonghi.bcb.model.Client;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 public class ClientMapper {
     public Client toModel(ClientDTO dto) {
