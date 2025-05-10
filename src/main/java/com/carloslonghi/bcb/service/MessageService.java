@@ -1,7 +1,9 @@
 package com.carloslonghi.bcb.service;
 
+import com.carloslonghi.bcb.dto.MessageDTO;
 import com.carloslonghi.bcb.dto.MessageRequestDTO;
 import com.carloslonghi.bcb.dto.MessageResponseDTO;
+import com.carloslonghi.bcb.mapper.MessageMapper;
 import com.carloslonghi.bcb.mapper.MessageRequestMapper;
 import com.carloslonghi.bcb.mapper.MessageResponseMapper;
 import com.carloslonghi.bcb.model.Client;
@@ -9,6 +11,7 @@ import com.carloslonghi.bcb.model.Conversation;
 import com.carloslonghi.bcb.model.Message;
 import com.carloslonghi.bcb.model.enums.ClientPlanType;
 import com.carloslonghi.bcb.model.enums.MessagePriority;
+import com.carloslonghi.bcb.model.enums.MessageStatus;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import com.carloslonghi.bcb.repository.ConversationRepository;
 import com.carloslonghi.bcb.repository.MessageRepository;
@@ -20,6 +23,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class MessageService {
     private final ConversationRepository conversationRepository;
     private final ClientRepository clientRepository;
 
+    private final MessageMapper messageMapper;
     private final MessageRequestMapper messageRequestMapper;
     private final MessageResponseMapper messageResponseMapper;
 
@@ -87,5 +93,38 @@ public class MessageService {
         conversationRepository.save(conversation);
 
         return messageResponseMapper.toDTO(message, currentBalance);
+    }
+
+    public List<MessageDTO> findAll() {
+        Long authId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        List<Message> messages = messageRepository.findBySenderId(authId);
+
+        return messages.stream()
+                .map(messageMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+    public MessageDTO findById(Long id) {
+        Long authId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        Message message = messageRepository.findById(id)
+                .filter(m -> m.getSender().getId().equals(authId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
+
+        return messageMapper.toDTO(message);
+    }
+
+    public MessageStatus getStatus(Long id) {
+        Long authId = (Long) SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        Message message = messageRepository.findById(id)
+                .filter(m -> m.getSender().getId().equals(authId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
+
+        return message.getStatus();
     }
 }
