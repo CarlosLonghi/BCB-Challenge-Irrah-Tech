@@ -3,6 +3,7 @@ package com.carloslonghi.bcb.service;
 import com.carloslonghi.bcb.dto.MessageDTO;
 import com.carloslonghi.bcb.dto.MessageRequestDTO;
 import com.carloslonghi.bcb.dto.MessageResponseDTO;
+import com.carloslonghi.bcb.infra.queue.PriorityMessageQueue;
 import com.carloslonghi.bcb.mapper.MessageMapper;
 import com.carloslonghi.bcb.model.Client;
 import com.carloslonghi.bcb.model.Conversation;
@@ -33,6 +34,7 @@ public class MessageService {
     private final ClientRepository clientRepository;
 
     private final MessageMapper messageMapper;
+    private final PriorityMessageQueue priorityMessageQueue;
 
     public MessageResponseDTO sendMessage(MessageRequestDTO dto) {
         Long senderId = (Long) SecurityContextHolder.getContext()
@@ -88,6 +90,8 @@ public class MessageService {
         conversation.setLastMessageTime(message.getCreatedAt());
         conversation.setUnreadCount(conversation.getUnreadCount() + 1);
         conversationRepository.save(conversation);
+
+        priorityMessageQueue.enqueue(message);
 
         return messageMapper.toResponseDTO(message, currentBalance);
     }
