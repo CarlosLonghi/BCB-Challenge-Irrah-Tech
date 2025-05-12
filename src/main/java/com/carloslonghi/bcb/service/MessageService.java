@@ -62,26 +62,38 @@ public class MessageService {
             conversation = conversationRepository.save(newConversation);
         }
 
-        // Define custo da mensagem
-        BigDecimal cost = dto.getPriority() == MessagePriority.URGENT
+        BigDecimal messageCost = dto.getPriority() == MessagePriority.URGENT
                 ? new BigDecimal("0.50")
                 : new BigDecimal("0.25");
 
-        // Define debito de saldo caso pre-pago
         BigDecimal currentBalance = null;
+
+        // Debito de saldo caso pre-pago
         if (sender.getPlanType() == ClientPlanType.PRE_PAID) {
-            if (sender.getBalance().compareTo(cost) < 0) {
+            if (sender.getBalance().compareTo(messageCost) < 0) {
                 throw new ResponseStatusException(
                         HttpStatus.PAYMENT_REQUIRED, "Saldo insuficiente");
             }
-            currentBalance = sender.getBalance().subtract(cost);
+            currentBalance = sender.getBalance().subtract(messageCost);
             sender.setBalance(currentBalance);
             clientRepository.save(sender);
         }
 
+        // Debito de saldo caso pos-pago
+        if (sender.getPlanType() == ClientPlanType.POST_PAID) {
+            BigDecimal remainingLimit = sender.getLimit().subtract(messageCost);
+            if (remainingLimit.compareTo(BigDecimal.ZERO) < 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.PAYMENT_REQUIRED, "Limite de consumo excedido");
+            }
+            sender.setLimit(remainingLimit);
+            clientRepository.save(sender);
+            currentBalance = remainingLimit;
+        }
+
         // Cria mensagem
         LocalDateTime createdAt = LocalDateTime.now();
-        Message message = messageMapper.toRequestModel(dto, sender, conversation, cost, createdAt);
+        Message message = messageMapper.toRequestModel(dto, sender, conversation, messageCost, createdAt);
 
         message = messageRepository.save(message);
 
