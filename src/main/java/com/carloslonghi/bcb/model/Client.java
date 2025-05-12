@@ -23,7 +23,7 @@ public class Client {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, unique = true, length = 20)
     private String document;
 
     @Column(name = "document_type", nullable = false)
