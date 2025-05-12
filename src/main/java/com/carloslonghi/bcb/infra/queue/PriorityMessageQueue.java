@@ -37,7 +37,7 @@ public class PriorityMessageQueue {
     private static class MessageComparator implements Comparator<Message> {
         @Override
         public int compare(Message m1, Message m2) {
-            // URGENT < NORMAL no compareTo (mas queremos que URGENT venha primeiro)
+            // URGENT < NORMAL no compareTo (mas URGENT tem prioridade)
             int priorityComparison = m1.getPriority().compareTo(m2.getPriority());
             if (priorityComparison != 0) {
                 return -priorityComparison;
