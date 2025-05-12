@@ -46,7 +46,10 @@ public class ConversationService {
 
         Conversation conversation = conversationRepository.findById(id)
                 .filter(msg -> msg.getClient().getId().equals(authId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Mensagem com id " + id + " não encontrada"
+                ));
 
         return conversationMapper.toDTO(conversation);
     }
@@ -57,7 +60,10 @@ public class ConversationService {
 
         Conversation conversation = conversationRepository.findById(conversationId)
                 .filter(conv -> conv.getClient().getId().equals(authId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Conversa não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Conversa com id " + conversationId + " não encontrada"
+                ));
 
         List<Message> messages = messageRepository.findByConversationId(conversation.getId());
 
