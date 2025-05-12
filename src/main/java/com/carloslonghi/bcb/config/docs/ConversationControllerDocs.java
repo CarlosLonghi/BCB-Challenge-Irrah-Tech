@@ -4,6 +4,7 @@ import com.carloslonghi.bcb.dto.ConversationDTO;
 import com.carloslonghi.bcb.dto.MessageDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -28,7 +29,9 @@ public interface ConversationControllerDocs {
                     description = "Conversas listadas com sucesso",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ConversationDTO.class)
+                            array = @ArraySchema(
+                                schema = @Schema(implementation = ConversationDTO.class)
+                            )
                     )
             ),
             @ApiResponse(
@@ -67,14 +70,19 @@ public interface ConversationControllerDocs {
             @Parameter(description = "ID da conversa", required = true) @PathVariable Long id
     );
 
-    @Operation(summary = "Listar Mensagens da Conversa", description = "Retorna as mensagens de uma conversa")
+    @Operation(
+            summary = "Listar Mensagens da Conversa",
+            description = "Retorna as mensagens de uma conversa"
+    )
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
                     description = "Mensagens listadas com sucesso",
                     content = @Content(
                             mediaType = "application/json",
-                            schema = @Schema(implementation = ConversationDTO.class)
+                            array = @ArraySchema(
+                                schema = @Schema(implementation = MessageDTO.class)
+                            )
                     )
             ),
             @ApiResponse(

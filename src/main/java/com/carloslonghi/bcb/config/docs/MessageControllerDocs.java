@@ -1,11 +1,13 @@
 package com.carloslonghi.bcb.config.docs;
 
+import com.carloslonghi.bcb.dto.ClientDTO;
 import com.carloslonghi.bcb.dto.MessageDTO;
 import com.carloslonghi.bcb.dto.MessageRequestDTO;
 import com.carloslonghi.bcb.dto.MessageResponseDTO;
 import com.carloslonghi.bcb.model.enums.MessageStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -58,9 +60,9 @@ public interface MessageControllerDocs {
                                             summary = "Sem conversationId → cria conversa nova",
                                             value = """
                                                     {
-                                                      "recipientId": 10,
+                                                      "recipientId": 1,
                                                       "recipientName": "Carlos Longhi",
-                                                      "content": "Olá, tudo bem?",
+                                                      "content": "Mensagem exemplo 1",
                                                       "priority": "NORMAL"
                                                     }
                                                     """
@@ -71,8 +73,8 @@ public interface MessageControllerDocs {
                                             value = """
                                                     {
                                                       "conversationId": 1,
-                                                      "recipientId": 10,
-                                                      "content": "Olá, tudo bem?",
+                                                      "recipientId": 1,
+                                                      "content": "Mensagem exemplo 2",
                                                       "priority": "NORMAL"
                                                     }
                                                     """
@@ -90,7 +92,13 @@ public interface MessageControllerDocs {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Mensagem enviada com sucesso"
+                    description = "Mensagem enviada com sucesso",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(
+                                    schema = @Schema(implementation = MessageDTO.class)
+                            )
+                    )
             ),
             @ApiResponse(
                     responseCode = "401",
@@ -107,7 +115,11 @@ public interface MessageControllerDocs {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Mensagem encontrada"
+                    description = "Mensagem encontrada",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = MessageDTO.class)
+                    )
             ),
             @ApiResponse(
                     responseCode = "401",
