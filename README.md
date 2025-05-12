@@ -1,10 +1,8 @@
-# Desafio Backend - BCB Chat API
-
----
+# [Desafio Backend](https://github.com/irrahgroup/irrah-tech-challenges/blob/main/docs/backend.md) - BCB Chat API
 
 ## Descrição do Projeto
 
-A **BCB Chat API** é um sistema backend em Java (Spring Boot) para gerenciamento de clientes, conversas e mensagens com sistema de filas prioritárias.
+O **BCB (Big Chat Brasil) API** é um sistema backend em Java (Spring Boot) para gerenciamento de clientes, conversas e mensagens com sistema de filas prioritárias.
 
 Funcionalidades implementadas:
 
@@ -49,17 +47,25 @@ O projeto inclui um `docker-compose.yml` que orquestra:
 ### Executando aplicação
 
 1. Clone o repositório:
+   - Usando **SSH**:
+      ```bash
+      git clone git@github.com:CarlosLonghi/BCB-Challenge-Irrah-Tech.git
+      ```
+   - Usando **HTTPS**:
+      ```bash
+      git clone https://github.com/CarlosLonghi/BCB-Challenge-Irrah-Tech.git
+      ```
+2. Acesse o diretório:
+   ```bash
+   cd BCB-Challenge-Irrah-Tech
+   ```
+
+3. Inicie os containers:
 
    ```bash
-   git clone https://github.com/seu-usuario/bcb-chat-api.git
-   cd bcb-chat-api
+   docker compose up -d --build
    ```
-2. Inicie os containers:
-
-   ```bash
-   docker-compose up -d --build
-   ```
-3. Acesse a API em `http://localhost:8080` e o Swagger UI em `http://localhost:8080/swagger-ui/index.html`.
+4. Acesse a API em `http://localhost:8080` e o Swagger UI em `http://localhost:8080/swagger-ui/index.html`.
 
 ## Endpoints Principais
 
@@ -102,6 +108,7 @@ O projeto inclui um `docker-compose.yml` que orquestra:
 Limitações / Trabalho Futuro:
 
 * Implementar **JWT** em vez de UUID.
+* Criar **Migrations** usando Flyway.
 * Persistir a fila em banco (para tolerância a falhas).
 * Adicionar **paginação** e filtros avançados nas listagens.
 * Testes automatizados (unitários e de integração).
