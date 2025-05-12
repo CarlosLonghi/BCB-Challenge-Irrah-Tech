@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.controller;
 
+import com.carloslonghi.bcb.config.docs.ConversationControllerDocs;
 import com.carloslonghi.bcb.dto.ConversationDTO;
 import com.carloslonghi.bcb.dto.MessageDTO;
 import com.carloslonghi.bcb.service.ConversationService;
@@ -15,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/conversations")
 @RequiredArgsConstructor
-public class ConversationController {
+public class ConversationController implements ConversationControllerDocs {
 
     private final ConversationService conversationService;
 

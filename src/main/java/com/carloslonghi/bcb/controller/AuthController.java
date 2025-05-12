@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.controller;
 
+import com.carloslonghi.bcb.config.docs.AuthControllerDocs;
 import com.carloslonghi.bcb.dto.AuthRequest;
 import com.carloslonghi.bcb.dto.AuthResponse;
 import com.carloslonghi.bcb.service.AuthService;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController implements AuthControllerDocs {
 
     private final AuthService authService;
 
