@@ -6,7 +6,9 @@ import com.carloslonghi.bcb.mapper.ClientMapper;
 import com.carloslonghi.bcb.model.Client;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,25 +42,34 @@ public class ClientService {
 
     public ClientDTO findById(Long id) {
         Optional<Client> client = clientRepository.findById(id);
-        return client.map(clientMapper::toDTO).orElse(null);
+        return client.map(clientMapper::toDTO)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Cliente com id " + id + " não encontrado"
+                ));
     }
 
     public ClientDTO updateById(Long id, ClientDTO dto) {
-        Optional<Client> clientExist = clientRepository.findById(id);
+        clientRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Cliente com id " + id + " não encontrado"
+                ));
 
-        if (clientExist.isPresent()) {
-            Client clientUpdated = clientMapper.toModel(dto);
-            clientUpdated.setId(id);
-            Client client = clientRepository.save(clientUpdated);
-            return clientMapper.toDTO(client);
-        }
-        return null;
+        Client clientUpdated = clientMapper.toModel(dto);
+        clientUpdated.setId(id);
+
+        Client saved = clientRepository.save(clientUpdated);
+        return clientMapper.toDTO(saved);
     }
 
     public ClientBalanceDTO getClientBalance(Long id) {
         return clientRepository.findById(id)
                 .map(client ->
                         new ClientBalanceDTO(client.getBalance(), client.getLimit())
-                ).orElse(null);
+                ).orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Cliente com id " + id + " não encontrado"
+                ));
     }
 }

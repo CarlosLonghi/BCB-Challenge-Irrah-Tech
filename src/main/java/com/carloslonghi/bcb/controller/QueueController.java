@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.controller;
 
+import com.carloslonghi.bcb.config.docs.QueueControllerDocs;
 import com.carloslonghi.bcb.dto.QueueStatusDTO;
 import com.carloslonghi.bcb.service.QueueStatusService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/queue")
 @RequiredArgsConstructor
-public class QueueController {
+public class QueueController implements QueueControllerDocs {
 
     private final QueueStatusService queueStatusService;
 

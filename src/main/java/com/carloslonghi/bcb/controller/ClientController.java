@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.controller;
 
+import com.carloslonghi.bcb.config.docs.ClientControllerDocs;
 import com.carloslonghi.bcb.dto.ClientBalanceDTO;
 import com.carloslonghi.bcb.dto.ClientDTO;
 import com.carloslonghi.bcb.service.ClientService;
@@ -13,14 +14,13 @@ import java.util.List;
 @RestController
 @RequestMapping
 @RequiredArgsConstructor
-public class ClientController {
+public class ClientController implements ClientControllerDocs {
     private final ClientService clientService;
 
     @PostMapping("/clients")
     public ResponseEntity<ClientDTO> create(@RequestBody ClientDTO dto) {
         ClientDTO clientCreated = clientService.create(dto);
-
-        return ResponseEntity.ok(clientCreated);
+        return ResponseEntity.status(HttpStatus.CREATED).body(clientCreated);
     }
 
     @GetMapping("/clients")
@@ -29,41 +29,20 @@ public class ClientController {
     }
 
     @GetMapping("/clients/{id}")
-    public ResponseEntity<?> findById(@PathVariable Long id) {
+    public ResponseEntity<ClientDTO> findById(@PathVariable Long id) {
         ClientDTO clientFound = clientService.findById(id);
-        if (clientFound != null) {
-            return ResponseEntity.ok(clientFound);
-        }
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body("Cliente com id " + id +  " não encontrado");
+        return ResponseEntity.ok(clientFound);
     }
 
     @PutMapping("/clients/{id}")
-    public ResponseEntity<?> updateById(@PathVariable Long id, @RequestBody ClientDTO dto) {
-        ClientDTO clientFound = clientService.findById(id);
-        if (clientFound != null) {
-            ClientDTO clientUpdated = clientService.updateById(id, dto);
-            return ResponseEntity
-                    .ok(clientUpdated);
-        }
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body("Cliente com id " + id + " não encontrado");
+    public ResponseEntity<ClientDTO> updateById(@PathVariable Long id, @RequestBody ClientDTO dto) {
+        ClientDTO clientUpdated = clientService.updateById(id, dto);
+        return ResponseEntity.ok(clientUpdated);
     }
 
     @GetMapping("/clients/{id}/balance")
-    public ResponseEntity<?> getClientBalance(@PathVariable Long id) {
-        ClientDTO clientFound = clientService.findById(id);
-        if (clientFound != null) {
-            ClientBalanceDTO balance = clientService.getClientBalance(id);
-            return ResponseEntity.ok(balance);
-        }
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body("Cliente com id " + id + " não encontrado");
+    public ResponseEntity<ClientBalanceDTO> getClientBalance(@PathVariable Long id) {
+        ClientBalanceDTO clientBalance = clientService.getClientBalance(id);
+        return ResponseEntity.ok(clientBalance);
     }
 }

@@ -113,7 +113,10 @@ public class MessageService {
 
         Message message = messageRepository.findById(id)
                 .filter(msg -> msg.getSender().getId().equals(authId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Mensagem com id " + id + " não encontrada"
+                ));
 
         return messageMapper.toDTO(message);
     }
@@ -124,7 +127,10 @@ public class MessageService {
 
         Message message = messageRepository.findById(id)
                 .filter(msg -> msg.getSender().getId().equals(authId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Mensagem não encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Mensagem com id " + id + " não encontrada"
+                ));
 
         return message.getStatus();
     }
