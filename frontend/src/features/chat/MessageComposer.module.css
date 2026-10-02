@@ -1,0 +1,47 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  resize: none;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.counter {
+  margin-right: auto; /* empurra o botão para a direita */
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+/* "Enviar | R$ 0,25": o custo fica separado por uma linha fina */
+.cost {
+  padding-left: 8px;
+  border-left: 1px solid rgb(255 255 255 / 0.35);
+  font-weight: 400;
+}
+
+@media (max-width: 767px) {
+  .bar {
+    gap: 8px;
+  }
+
+  .input {
+    padding: 10px 12px;
+    font-size: 16px; /* abaixo de 16px o iOS dá zoom ao focar */
+  }
+
+  .send {
+    height: 44px;
+    padding: 0 14px;
+  }
+}

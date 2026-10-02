@@ -1,0 +1,67 @@
+.chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.recipient {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recipient h2 {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recipientId {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+/* Corpo usado só no estado de erro (conversa não encontrada) */
+.errorBody {
+  flex: 1;
+  padding: 24px;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 767px) {
+  .header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .recipientId {
+    display: none;
+  }
+
+  .footer {
+    padding: 12px 16px 16px;
+  }
+}

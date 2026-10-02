@@ -1,0 +1,27 @@
+/* Uma classe por status (o nome é o status em minúsculas: styles.queued, styles.sent...) */
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.processing svg {
+  animation: spin 1s linear infinite;
+}
+
+.delivered,
+.read {
+  color: var(--color-primary);
+}
+
+.failed {
+  color: var(--color-danger);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
