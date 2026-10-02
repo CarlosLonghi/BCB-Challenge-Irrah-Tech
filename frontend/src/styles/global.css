@@ -1,0 +1,221 @@
+/*
+ * Estilos globais: variáveis (tokens), reset, elementos de formulário e utilitários
+ * usados em várias features (.button, .alert, .form-row, .mono, .visually-hidden).
+ * O estilo de cada componente fica no .module.css ao lado dele.
+ *
+ * Visual: "tinta, papel e um verde só". Barra superior em tinta (azul-marinho), fundo
+ * cinza-papel, superfícies brancas separadas por bordas de 1px (sem sombras) e um único
+ * verde para ações. Tudo que é número (dinheiro, horário, documento) usa a fonte mono.
+ */
+
+:root {
+  --color-ink: #0f1b2d;
+  --color-ink-line: #2a3a52; /* bordas sobre a tinta */
+  --color-ink-muted: #a9b4c2; /* texto secundário sobre a tinta */
+  --color-ink-text: #e8ecf1;
+  --color-bg: #f2f3f0;
+  --color-surface: #ffffff;
+  --color-border: #daddd8;
+  --color-border-soft: #eceeea; /* divisória entre itens de lista */
+  --color-input-border: #c9cec6;
+  --color-text: #0f1b2d;
+  --color-muted: #5b6676;
+  --color-primary: #0b6e4f;
+  --color-primary-dark: #07533b;
+  --color-primary-soft: #eef5f1;
+  --color-avatar: #e3e8ef;
+  --color-avatar-text: #24364f;
+  --color-urgent: #8a4b08;
+  --color-urgent-soft: #fcefd9;
+  --color-danger: #b42318;
+  --color-danger-border: #e7a39b;
+  --color-danger-soft: #fdecea;
+
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --radius: 6px;
+  --header-height: 56px;
+
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.4;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--color-primary);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  padding: 10px 14px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+input,
+select {
+  height: 48px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+/* Números (dinheiro, horário, documento, contador) */
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Botões */
+
+.button {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+  color: #fff;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.button--large {
+  height: 48px;
+  font-size: 15px;
+}
+
+.button--small {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+/* Alertas */
+
+.alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+ul.alert {
+  display: block;
+  padding-left: 28px;
+}
+
+.alert--error {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.alert--info {
+  border-color: var(--color-border);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+/* Linha de campos lado a lado */
+
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.form-row__grow {
+  flex: 1;
+}
+
+/* Some da tela, mas continua para leitores de tela */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
