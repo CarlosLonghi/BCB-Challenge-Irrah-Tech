@@ -1,0 +1,20 @@
+# Dependências e builds
+node_modules/
+dist/
+build/
+target/
+.vitest/
+*.log
+
+# Ambiente e segredos
+.env
+.env.*
+!.env.example
+
+# IDEs e sistema
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
