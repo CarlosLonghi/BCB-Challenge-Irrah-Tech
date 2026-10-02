@@ -1,0 +1,130 @@
+.header {
+  height: var(--header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  background: var(--color-ink);
+  color: var(--color-ink-text);
+}
+
+.brand {
+  margin-right: auto;
+}
+
+/* Desktop: saldo em caixa (plano | rótulo | valor) e nome à direita dele */
+.client {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 20px;
+}
+
+.name {
+  padding-left: 20px;
+  border-left: 1px solid var(--color-ink-line);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 32px;
+}
+
+.balance {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--color-ink-line);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.plan {
+  padding: 7px 12px;
+  border-right: 1px solid var(--color-ink-line);
+  color: var(--color-ink-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.label {
+  padding: 7px 12px;
+  color: var(--color-ink-muted);
+}
+
+.amount {
+  padding: 7px 12px 7px 0;
+  color: #fff;
+  font-weight: 500;
+}
+
+.logout {
+  height: 32px;
+  margin-left: -10px; /* fica colado ao nome, como no layout */
+  padding: 0 12px;
+  border: 1px solid var(--color-ink-line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-ink-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.logout:hover {
+  background: var(--color-ink-line);
+}
+
+.logout:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Celular: nome em cima, saldo embaixo, sem a marca e sem a caixa */
+@media (max-width: 767px) {
+  .header {
+    height: auto;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .brand,
+  .plan {
+    display: none;
+  }
+
+  .client {
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    margin-right: auto;
+  }
+
+  .name {
+    max-width: 100%;
+    padding-left: 0;
+    border-left: none;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .balance {
+    border: none;
+    font-size: 12px;
+  }
+
+  .label {
+    padding: 0 4px 0 0;
+  }
+
+  .amount {
+    padding: 0;
+  }
+
+  .logout {
+    height: 44px;
+    margin-left: 0;
+    padding: 0 14px;
+  }
+}

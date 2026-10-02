@@ -1,0 +1,42 @@
+/* Tela logada: cabeçalho fixo em cima, lista + chat embaixo */
+
+.app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.listPane {
+  width: 360px;
+  flex-shrink: 0;
+  display: flex;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.chatPane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Abaixo de 768px: lista OU chat (o chat tem botão de voltar) */
+@media (max-width: 767px) {
+  .listPane {
+    width: 100%;
+    border-right: none;
+  }
+
+  .chatOpen .listPane,
+  .body:not(.chatOpen) .chatPane {
+    display: none;
+  }
+}
