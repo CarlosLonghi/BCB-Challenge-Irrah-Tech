@@ -1,0 +1,13 @@
+/* Iniciais num quadrado de cantos suaves (mais "sistema" que o círculo). */
+.avatar {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  background: var(--color-avatar);
+  color: var(--color-avatar-text);
+  font-size: 13px;
+  font-weight: 600;
+}

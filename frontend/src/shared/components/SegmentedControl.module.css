@@ -1,0 +1,89 @@
+/* Grupo de opções com cara de "chave": borda única e a opção escolhida preenchida em tinta. */
+
+.group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.option {
+  position: relative;
+  flex: 1;
+  height: 42px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* O rádio continua acessível pelo teclado, mas quem aparece é o rótulo. */
+.option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option:hover {
+  background: var(--color-bg);
+}
+
+.option:has(input:checked) {
+  background: var(--color-ink);
+  color: #fff;
+}
+
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.hint {
+  font-family: var(--font-mono);
+  color: var(--color-muted);
+}
+
+.option:has(input:checked) .hint {
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* Versão compacta (prioridade no campo de envio) */
+.small .option {
+  flex: none;
+  height: 32px;
+  font-size: 13px;
+}
+
+@media (max-width: 767px) {
+  .small .option {
+    height: 40px;
+    padding: 0 10px;
+  }
+
+  /* No celular o custo aparece só no botão Enviar. */
+  .small .hint {
+    display: none;
+  }
+}

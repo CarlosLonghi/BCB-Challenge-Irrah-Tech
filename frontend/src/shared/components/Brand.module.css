@@ -1,0 +1,39 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mark {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--color-primary);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.large {
+  gap: 12px;
+}
+
+.large .mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.large .name {
+  font-size: 17px;
+  letter-spacing: 0.01em;
+}

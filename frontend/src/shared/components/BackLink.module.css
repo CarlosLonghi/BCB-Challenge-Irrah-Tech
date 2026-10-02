@@ -1,0 +1,22 @@
+.backLink {
+  display: none; /* só no celular (media query abaixo) */
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-left: -8px;
+  border-radius: var(--radius);
+  color: var(--color-text);
+}
+
+.backLink:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+@media (max-width: 767px) {
+  .backLink {
+    display: inline-flex;
+  }
+}
