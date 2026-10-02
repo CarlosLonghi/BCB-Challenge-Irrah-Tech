@@ -1,0 +1,61 @@
+.item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 20px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.item:hover {
+  background: var(--color-bg);
+  color: inherit;
+}
+
+/* Conversa aberta: fundo verde-claro e uma barra verde à esquerda */
+.active,
+.active:hover {
+  background: var(--color-primary-soft);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.preview {
+  color: var(--color-muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

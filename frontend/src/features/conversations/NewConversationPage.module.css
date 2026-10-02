@@ -1,0 +1,50 @@
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Mesma barra do topo do chat */
+.header {
+  height: 64px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.body {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+@media (max-width: 767px) {
+  .header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .body {
+    padding: 20px 16px;
+  }
+
+  .recipient {
+    flex-direction: column;
+  }
+}
