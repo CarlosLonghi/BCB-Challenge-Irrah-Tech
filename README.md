@@ -1,8 +1,7 @@
-# BCB — Big Chat Brasil
+# BCB - Big Chat Brasil
 
 Plataforma de chat para comunicação entre empresas e seus clientes, com cobrança por mensagem (pré-pago e pós-pago) e dois níveis de prioridade (normal e urgente). Solução do desafio **Fullstack** da Irrah Tech ([enunciado](https://github.com/irrahgroup/irrah-tech-challenges/blob/main/docs/fullstack.md)).
 
-> **Estado atual:** backend e frontend funcionais e integrados. Falta só o teste de `docker compose up` do zero (ver "Funcionalidades").
 
 ## Como executar
 
@@ -87,12 +86,12 @@ docker-compose.yaml
 | Cadastro e consulta de clientes, saldo/limite | ✅ |
 | Conversas e histórico de mensagens | ✅ |
 | Envio com custo (normal R$ 0,25 / urgente R$ 0,50) e débito de saldo/limite | ✅ |
-| Fila com prioridade (urgente antes de normal, FIFO) e ciclo QUEUED → PROCESSING → SENT → DELIVERED | ✅ |
+| Fila com prioridade (urgente antes de normal, FIFO) e ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED | ✅ |
 | Fila em RabbitMQ com prioridade, DLQ e reprocessamento | ✅ |
 | Frontend: login, cadastro de cliente, conversas, nova conversa, chat, saldo/limite no cabeçalho | ✅ |
-| Frontend: layout responsivo (lista **ou** chat no celular) | ✅ |
-| Frontend: status visuais de mensagem com polling (melhoria da Parte 2) | ✅ |
-| Docker Compose do conjunto (as imagens compilam; falta o teste do zero) | 🚧 |
+| Frontend: layout responsivo | ✅ |
+| Frontend: status visuais de mensagem com polling | ✅ |
+| Docker Compose do conjunto | ✅ |
 
 ## Premissas
 
