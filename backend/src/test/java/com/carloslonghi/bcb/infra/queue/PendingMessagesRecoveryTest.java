@@ -12,14 +12,20 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.AmqpConnectException;
+import org.springframework.dao.DataAccessResourceFailureException;
 
+import java.net.ConnectException;
 import java.util.List;
 
 import static com.carloslonghi.bcb.support.TestData.conversation;
 import static com.carloslonghi.bcb.support.TestData.message;
 import static com.carloslonghi.bcb.support.TestData.prePaidClient;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -63,5 +69,38 @@ class PendingMessagesRecoveryTest {
 
         verify(messageRepository).findByStatusInOrderByCreatedAtAsc(anyList());
         verifyNoInteractions(messageQueue);
+    }
+
+    @Test
+    @DisplayName("RabbitMQ fora do ar: não derruba a inicialização e tenta as demais mensagens")
+    void brokerDownDoesNotStopRecovery() {
+        Conversation conversation = conversation(7L, prePaidClient(1L, "1.00"));
+        Message first = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.QUEUED);
+        Message second = message(2L, conversation, MessagePriority.URGENT, MessageStatus.PROCESSING);
+        when(messageRepository.findByStatusInOrderByCreatedAtAsc(anyList())).thenReturn(List.of(first, second));
+        doThrow(new AmqpConnectException(new ConnectException("Connection refused")))
+                .when(messageQueue).enqueue(first);
+
+        assertThatCode(() -> recovery.requeuePendingMessages()).doesNotThrowAnyException();
+
+        verify(messageQueue).enqueue(second);
+        verify(messageRepository).updateStatus(1L, MessageStatus.QUEUED);
+        verify(messageRepository).updateStatus(2L, MessageStatus.QUEUED);
+    }
+
+    @Test
+    @DisplayName("falha do banco numa mensagem não a enfileira, mas segue para as demais")
+    void databaseFailureSkipsOnlyThatMessage() {
+        Conversation conversation = conversation(7L, prePaidClient(1L, "1.00"));
+        Message first = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
+        Message second = message(2L, conversation, MessagePriority.NORMAL, MessageStatus.QUEUED);
+        when(messageRepository.findByStatusInOrderByCreatedAtAsc(anyList())).thenReturn(List.of(first, second));
+        doThrow(new DataAccessResourceFailureException("banco fora do ar"))
+                .when(messageRepository).updateStatus(1L, MessageStatus.QUEUED);
+
+        assertThatCode(() -> recovery.requeuePendingMessages()).doesNotThrowAnyException();
+
+        verify(messageQueue, never()).enqueue(first);
+        verify(messageQueue).enqueue(second);
     }
 }

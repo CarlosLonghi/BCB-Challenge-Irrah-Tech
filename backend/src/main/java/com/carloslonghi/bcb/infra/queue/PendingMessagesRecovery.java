@@ -29,13 +29,21 @@ public class PendingMessagesRecovery {
         List<Message> pending = messageRepository.findByStatusInOrderByCreatedAtAsc(PENDING_STATUSES);
 
         // Volta para QUEUED: a mensagem vai esperar na fila de novo, e o frontend nao deve mostrar "processando" enquanto isso
+        int requeued = 0;
         for (Message message : pending) {
-            messageRepository.updateStatus(message.getId(), MessageStatus.QUEUED);
-            messageQueue.enqueue(message);
+            // Falha numa mensagem (ex.: RabbitMQ fora do ar) nao derruba a inicializacao nem impede as proximas;
+            // ela fica no banco e volta a ser tentada na proxima inicializacao
+            try {
+                messageRepository.updateStatus(message.getId(), MessageStatus.QUEUED);
+                messageQueue.enqueue(message);
+                requeued++;
+            } catch (Exception e) {
+                log.error("Nao foi possivel reenfileirar a mensagem {}", message.getId(), e);
+            }
         }
 
         if (!pending.isEmpty()) {
-            log.info("{} mensagem(ns) pendente(s) reenfileirada(s) na inicializacao", pending.size());
+            log.info("{} de {} mensagem(ns) pendente(s) reenfileirada(s) na inicializacao", requeued, pending.size());
         }
     }
 }
