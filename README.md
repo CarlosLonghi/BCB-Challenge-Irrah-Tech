@@ -60,7 +60,35 @@ Com `db` e `rabbitmq` rodando (`docker compose up -d db rabbitmq`):
 ```bash
 cd backend
 sh ./mvnw spring-boot:run   # http://localhost:8080
-sh ./mvnw test              # precisa do PostgreSQL e do RabbitMQ no ar
+```
+
+## Testes
+
+### Backend
+
+Os testes não usam o `docker compose`: os unitários não precisam de infraestrutura, e os de integração sobem um PostgreSQL e um RabbitMQ descartáveis com Testcontainers (basta o Docker estar ativo).
+
+```bash
+cd backend
+sh ./mvnw test      # só os unitários (JUnit + Mockito), sem Docker, em poucos segundos
+sh ./mvnw verify    # unitários + integração (*IT) + checagem de cobertura; precisa do Docker
+```
+
+- **Unitários** (`src/test/java/.../*Test.java`): services, worker, fila, filtro de token, tratamento de erros, controllers e mappers, com caminhos felizes e de erro. Foco na cobrança: débito de saldo (pré-pago) e de limite (pós-pago), recusa sem saldo/limite e nada gravado nem enfileirado quando o envio falha.
+- **Integração** (`src/test/java/.../integration/*IT.java`): a aplicação inteira com banco e fila reais, via HTTP (MockMvc). Cobrem o que mock não enxerga:
+  - lock pessimista do cliente (uma segunda transação espera a primeira) e envios simultâneos que não gastam o mesmo saldo duas vezes;
+  - transação do envio (falha depois do débito desfaz o débito) e o `updateStatus` com `@Transactional` + `@Modifying`;
+  - migrations do Flyway, constraints do banco, segurança (401/403), validação (400) e o fluxo completo envio -> RabbitMQ -> worker -> `DELIVERED`;
+  - dead-letter queue (`FAILED` depois das tentativas) e recuperação de mensagens pendentes na inicialização.
+- **Cobertura:** o JaCoCo exige no mínimo 80% de linhas nos testes unitários (o `verify` falha abaixo disso); hoje está em 100%. O relatório fica em `backend/target/site/jacoco/index.html` depois do `test`/`verify`. Bootstrap, configuração de infraestrutura e DTOs ficam fora da medição.
+
+Para rodar uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` (unitário) ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT` (integração).
+
+### Frontend
+
+```bash
+cd frontend
+npm test            # Vitest + Testing Library
 ```
 
 ## Estrutura
@@ -74,7 +102,8 @@ docker-compose.yaml
 
 ## Tecnologias
 
-- **Backend:** Java 21, Spring Boot 4.1 (Web, Security, Data JPA, Validation, AMQP, Actuator), PostgreSQL, RabbitMQ, MapStruct, Lombok, springdoc-openapi 3 (Swagger)
+- **Backend:** Java 21, Spring Boot 4.1 (Web, Security, Data JPA, Validation, AMQP, Actuator), PostgreSQL, Flyway, RabbitMQ, MapStruct, Lombok, springdoc-openapi 3 (Swagger)
+- **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 18 + TypeScript + Vite, React Router, CSS Modules, Vitest + Testing Library, ícones Phosphor; servido por nginx no Docker
 - **Infra:** Docker Compose
 
@@ -115,7 +144,7 @@ docker-compose.yaml
 - **Visual:** IBM Plex Sans/Mono (números sempre em mono), barra azul-marinho, fundo cinza-papel, um único verde para ações; tokens em `frontend/src/styles/global.css`.
 - **Schema:** versionado com Flyway (`backend/src/main/resources/db/migrations`); o Hibernate só valida (`ddl-auto=validate`).
 - **Sessões:** o token não expira e não há logout; vale até o backend reiniciar.
-- **Testes do backend:** só o teste de carga do contexto do Spring; a validação das regras foi feita chamando a API.
+- **Testes do backend:** unitários com Mockito para as regras e de integração com Testcontainers para o que depende de Spring, banco e fila reais (lock, transações, queries, segurança, worker). Os de integração rodam no `verify`, então o `test` continua rápido e sem Docker. A meta de cobertura mede só os unitários, para os de integração não esconderem lacunas neles.
 - **Não implementado:** tipo de mensagem SMS/WhatsApp, reset mensal do limite pós-pago, histórico de transações financeiras, conversão entre planos, administração de créditos (saldo e limite são definidos só no cadastro).
 
 ## Documentação
