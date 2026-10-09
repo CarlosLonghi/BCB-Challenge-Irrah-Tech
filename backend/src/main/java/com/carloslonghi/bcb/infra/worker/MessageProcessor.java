@@ -3,6 +3,7 @@ package com.carloslonghi.bcb.infra.worker;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -16,11 +17,14 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MessageProcessor {
 
-    private static final long STEP_DELAY_MS = 4000;
     private static final Set<MessageStatus> FINAL_STATUSES =
             Set.of(MessageStatus.DELIVERED, MessageStatus.READ, MessageStatus.FAILED);
 
     private final MessageRepository messageRepository;
+
+    // Pausa entre as etapas; os testes zeram para nao esperar
+    @Value("${bcb.worker.step-delay-ms:4000}")
+    private long stepDelayMs;
 
     public void process(Long messageId) throws InterruptedException {
         MessageStatus current = messageRepository.findById(messageId)
@@ -33,10 +37,10 @@ public class MessageProcessor {
         }
 
         messageRepository.updateStatus(messageId, MessageStatus.PROCESSING);
-        Thread.sleep(STEP_DELAY_MS);
+        Thread.sleep(stepDelayMs);
 
         messageRepository.updateStatus(messageId, MessageStatus.SENT);
-        Thread.sleep(STEP_DELAY_MS);
+        Thread.sleep(stepDelayMs);
 
         messageRepository.updateStatus(messageId, MessageStatus.DELIVERED);
     }
