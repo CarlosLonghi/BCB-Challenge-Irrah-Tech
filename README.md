@@ -113,7 +113,7 @@ docker-compose.yaml
 - **Status `FAILED` sem reenviar e sem estorno:** o débito acontece no envio e a falha não devolve o valor; um botão de reenvio cobraria de novo.
 - **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema só envia mensagens e não recebe respostas.
 - **Visual:** IBM Plex Sans/Mono (números sempre em mono), barra azul-marinho, fundo cinza-papel, um único verde para ações; tokens em `frontend/src/styles/global.css`.
-- **Schema:** gerado por `ddl-auto=update`. Migrations com Flyway ficam como trabalho futuro.
+- **Schema:** versionado com Flyway (`backend/src/main/resources/db/migrations`); o Hibernate só valida (`ddl-auto=validate`).
 - **Sessões:** o token não expira e não há logout; vale até o backend reiniciar.
 - **Testes do backend:** só o teste de carga do contexto do Spring; a validação das regras foi feita chamando a API.
 - **Não implementado:** tipo de mensagem SMS/WhatsApp, reset mensal do limite pós-pago, histórico de transações financeiras, conversão entre planos, administração de créditos (saldo e limite são definidos só no cadastro).
