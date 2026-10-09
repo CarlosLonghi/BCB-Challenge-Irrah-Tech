@@ -155,4 +155,28 @@ class ConversationServiceTest {
 
         assertThat(conversationService.findMessages(7L)).containsExactly(message);
     }
+
+    @Test
+    @DisplayName("findMessages de conversa de outro cliente lança not found sem buscar mensagens")
+    void findMessagesOfOtherClient() {
+        Conversation conversation = conversation(7L, prePaidClient(2L, "1.00"));
+        when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
+
+        assertThatThrownBy(() -> conversationService.findMessages(7L))
+                .isInstanceOf(ReferencedEntityNotFoundException.class);
+        verify(messageRepository, never()).findByConversationIdOrderByCreatedAtAsc(any());
+    }
+
+    @Test
+    @DisplayName("findOrCreate com conversationId de outro cliente não cria conversa nova")
+    void conversationIdOfOtherClient() {
+        Conversation conversation = conversation(7L, prePaidClient(2L, "1.00"));
+        when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
+        MessageRequest request = new MessageRequest(7L, 55, "Maria Souza", "Oi", MessagePriority.NORMAL);
+
+        assertThatThrownBy(() -> conversationService.findOrCreate(client, request))
+                .isInstanceOf(ReferencedEntityNotFoundException.class)
+                .hasMessage("Conversa de id 7 não encontrado(a).");
+        verify(conversationRepository, never()).save(any());
+    }
 }

@@ -72,4 +72,24 @@ class AuthServiceTest {
     void unknownToken() {
         assertThat(authService.getClientIdFromToken("token-inexistente")).isNull();
     }
+
+    @Test
+    @DisplayName("cliente inativo não recebe token")
+    void inactiveClientGetsNoToken() {
+        Client client = prePaidClient(1L, "10.00");
+        client.setActive(false);
+        when(clientRepository.findByDocument("12345678901")).thenReturn(Optional.of(client));
+
+        assertThatThrownBy(() -> authService.authenticate("12345678901"))
+                .isInstanceOf(ClientNotActiveException.class)
+                .hasMessage("Cliente inativo.");
+    }
+
+    @Test
+    @DisplayName("token vazio não resolve para nenhum cliente")
+    void blankToken() {
+        authService.createToken(1L);
+
+        assertThat(authService.getClientIdFromToken("")).isNull();
+    }
 }

@@ -75,4 +75,17 @@ class MessageMapperTest {
         assertThat(mapper.toResponse(null)).isNull();
         assertThat(mapper.toSendResponse(null)).isNull();
     }
+
+    @Test
+    @DisplayName("mensagem sem conversa ou remetente carregados não quebra o toResponse")
+    void missingRelations() {
+        Message message = messageFrom(prePaidClient(1L, "9.50"));
+        message.setConversation(null);
+        message.setSender(null);
+
+        MessageResponse response = mapper.toResponse(message);
+
+        assertThat(response.conversationId()).isNull();
+        assertThat(response.senderId()).isNull();
+    }
 }

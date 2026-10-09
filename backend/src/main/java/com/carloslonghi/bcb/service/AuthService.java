@@ -1,8 +1,8 @@
 package com.carloslonghi.bcb.service;
 
+import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.exception.ClientNotActiveException;
 import com.carloslonghi.bcb.exception.DocumentNotRegisteredException;
-import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

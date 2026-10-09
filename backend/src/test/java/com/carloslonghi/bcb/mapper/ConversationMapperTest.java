@@ -33,4 +33,13 @@ class ConversationMapperTest {
     void nullInput() {
         assertThat(mapper.toResponse(null)).isNull();
     }
+
+    @Test
+    @DisplayName("conversa sem cliente carregado vira clientId nulo")
+    void missingClient() {
+        Conversation conversation = conversation(7L, prePaidClient(1L, "10.00"));
+        conversation.setClient(null);
+
+        assertThat(mapper.toResponse(conversation).clientId()).isNull();
+    }
 }

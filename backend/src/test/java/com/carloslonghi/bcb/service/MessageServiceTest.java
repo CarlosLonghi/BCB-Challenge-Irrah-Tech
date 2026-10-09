@@ -6,7 +6,9 @@ import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import com.carloslonghi.bcb.exception.CreditLimitExceededException;
 import com.carloslonghi.bcb.exception.InsufficientBalanceException;
+import com.carloslonghi.bcb.exception.MissingRecipientException;
 import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
 import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.repository.ClientRepository;
@@ -24,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -249,5 +252,88 @@ class MessageServiceTest {
 
         assertThatThrownBy(() -> messageService.findById(1L))
                 .isInstanceOf(ReferencedEntityNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("pós-pago sem limite: a exceção propaga e nada é salvo nem enfileirado")
+    void creditLimitExceededSavesNothing() {
+        MessageRequest request = request(MessagePriority.NORMAL);
+        givenSenderAndConversation(request);
+        doThrow(new CreditLimitExceededException()).when(clientService).debit(eq(sender), any());
+
+        assertThatThrownBy(() -> messageService.sendMessage(request))
+                .isInstanceOf(CreditLimitExceededException.class);
+
+        verify(messageRepository, never()).save(any());
+        verify(conversationRepository, never()).save(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("conversa nova sem destinatário: falha antes de cobrar")
+    void missingRecipientDoesNotCharge() {
+        MessageRequest request = new MessageRequest(null, null, null, "Oi", MessagePriority.NORMAL);
+        when(clientRepository.findWithLockById(SENDER_ID)).thenReturn(Optional.of(sender));
+        when(conversationService.findOrCreate(sender, request)).thenThrow(new MissingRecipientException());
+
+        assertThatThrownBy(() -> messageService.sendMessage(request))
+                .isInstanceOf(MissingRecipientException.class);
+
+        verifyNoInteractions(clientService, messageRepository, messageQueue);
+    }
+
+    @Test
+    @DisplayName("conversa de outro cliente ou inexistente: falha antes de cobrar")
+    void unknownConversationDoesNotCharge() {
+        MessageRequest request = request(MessagePriority.URGENT);
+        when(clientRepository.findWithLockById(SENDER_ID)).thenReturn(Optional.of(sender));
+        when(conversationService.findOrCreate(sender, request))
+                .thenThrow(new ReferencedEntityNotFoundException("Conversa", 7L));
+
+        assertThatThrownBy(() -> messageService.sendMessage(request))
+                .isInstanceOf(ReferencedEntityNotFoundException.class);
+
+        verifyNoInteractions(clientService, messageRepository, messageQueue);
+    }
+
+    @Test
+    @DisplayName("falha ao salvar a mensagem propaga e não registra o enfileiramento")
+    void messageSaveFailure() {
+        MessageRequest request = request(MessagePriority.NORMAL);
+        givenSenderAndConversation(request);
+        when(messageRepository.save(any(Message.class))).thenThrow(new DataAccessResourceFailureException("banco fora do ar"));
+
+        assertThatThrownBy(() -> messageService.sendMessage(request))
+                .isInstanceOf(DataAccessResourceFailureException.class);
+
+        verify(conversationRepository, never()).save(any());
+        assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
+        verifyNoInteractions(messageQueue);
+    }
+
+    @Test
+    @DisplayName("se a transação fizer rollback, a mensagem não é enfileirada")
+    void rollbackDoesNotEnqueue() {
+        MessageRequest request = request(MessagePriority.NORMAL);
+        givenSenderAndConversation(request);
+        givenSaveReturnsWithId();
+
+        messageService.sendMessage(request);
+        TransactionSynchronizationManager.getSynchronizations()
+                .forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+        verifyNoInteractions(messageQueue);
+    }
+
+    @Test
+    @DisplayName("findById e getStatus de mensagem inexistente lançam not found")
+    void missingMessage() {
+        when(messageRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> messageService.findById(1L))
+                .isInstanceOf(ReferencedEntityNotFoundException.class);
+        assertThatThrownBy(() -> messageService.getStatus(1L))
+                .isInstanceOf(ReferencedEntityNotFoundException.class)
+                .hasMessage("Mensagem de id 1 não encontrado(a).");
     }
 }

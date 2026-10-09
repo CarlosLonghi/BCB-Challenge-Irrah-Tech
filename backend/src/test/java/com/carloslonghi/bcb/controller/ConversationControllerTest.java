@@ -6,6 +6,7 @@ import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
 import com.carloslonghi.bcb.mapper.ConversationMapper;
 import com.carloslonghi.bcb.mapper.MessageMapper;
 import com.carloslonghi.bcb.service.ConversationService;
@@ -24,7 +25,9 @@ import static com.carloslonghi.bcb.support.TestData.conversation;
 import static com.carloslonghi.bcb.support.TestData.message;
 import static com.carloslonghi.bcb.support.TestData.prePaidClient;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -79,5 +82,15 @@ class ConversationControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsExactly(messageResponse);
+    }
+
+    @Test
+    @DisplayName("mensagens de conversa de outro cliente propagam not found")
+    void messagesOfOtherClientConversation() {
+        when(conversationService.findMessages(8L)).thenThrow(new ReferencedEntityNotFoundException("Conversa", 8L));
+
+        assertThatThrownBy(() -> controller.findMessagesByConversationId(8L))
+                .isInstanceOf(ReferencedEntityNotFoundException.class);
+        verifyNoInteractions(messageMapper);
     }
 }

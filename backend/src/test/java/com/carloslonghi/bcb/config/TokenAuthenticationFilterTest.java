@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -119,5 +120,22 @@ class TokenAuthenticationFilterTest {
     @DisplayName("só as rotas públicas dispensam o token")
     void publicRoutes(String method, String path, boolean isPublic) {
         assertThat(filter.shouldNotFilter(request(method, path))).isEqualTo(isPublic);
+    }
+
+    @ParameterizedTest(name = "Authorization: ''{0}''")
+    @CsvSource(value = {"'Bearer '", "bearer abc", "Bearerabc", "''"})
+    @DisplayName("header malformado ou com token vazio responde 401 sem autenticar")
+    void malformedHeader(String header) throws ServletException, IOException {
+        // Mock de Long devolve 0 por padrao; o AuthService real devolve null para token vazio
+        lenient().when(authService.getClientIdFromToken("")).thenReturn(null);
+        MockHttpServletRequest request = request("GET", "/messages");
+        request.addHeader("Authorization", header);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain, never()).doFilter(any(), any());
     }
 }

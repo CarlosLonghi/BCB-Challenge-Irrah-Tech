@@ -6,6 +6,8 @@ import com.carloslonghi.bcb.controller.response.SendMessageResponse;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import com.carloslonghi.bcb.exception.InsufficientBalanceException;
+import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
 import com.carloslonghi.bcb.mapper.MessageMapper;
 import com.carloslonghi.bcb.service.MessageService;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +25,9 @@ import static com.carloslonghi.bcb.support.TestData.conversation;
 import static com.carloslonghi.bcb.support.TestData.message;
 import static com.carloslonghi.bcb.support.TestData.prePaidClient;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -75,5 +79,25 @@ class MessageControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(MessageStatus.SENT);
+    }
+
+    @Test
+    @DisplayName("send sem saldo propaga o erro sem montar resposta")
+    void sendWithoutBalance() {
+        MessageRequest request = new MessageRequest(7L, null, null, "Olá", MessagePriority.URGENT);
+        when(messageService.sendMessage(request)).thenThrow(new InsufficientBalanceException());
+
+        assertThatThrownBy(() -> controller.send(request))
+                .isInstanceOf(InsufficientBalanceException.class);
+        verifyNoInteractions(messageMapper);
+    }
+
+    @Test
+    @DisplayName("status de mensagem inexistente propaga not found")
+    void statusOfMissingMessage() {
+        when(messageService.getStatus(9L)).thenThrow(new ReferencedEntityNotFoundException("Mensagem", 9L));
+
+        assertThatThrownBy(() -> controller.getStatus(9L))
+                .isInstanceOf(ReferencedEntityNotFoundException.class);
     }
 }

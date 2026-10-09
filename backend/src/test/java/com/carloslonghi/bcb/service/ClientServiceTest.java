@@ -19,6 +19,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -130,6 +132,26 @@ class ClientServiceTest {
             assertThatThrownBy(() -> clientService.debit(client, new BigDecimal("0.25")))
                     .isInstanceOf(InsufficientBalanceException.class);
         }
+
+        @Test
+        @DisplayName("um centavo a menos que o custo já é recusado")
+        void oneCentShort() {
+            Client client = prePaidClient(1L, "0.49");
+
+            assertThatThrownBy(() -> clientService.debit(client, new BigDecimal("0.50")))
+                    .isInstanceOf(InsufficientBalanceException.class);
+            assertThat(client.getBalance()).isEqualByComparingTo("0.49");
+        }
+
+        @Test
+        @DisplayName("se o banco falhar ao salvar, a exceção propaga (a transação do envio faz rollback)")
+        void saveFailurePropagates() {
+            Client client = prePaidClient(1L, "10.00");
+            when(clientRepository.save(client)).thenThrow(new DataAccessResourceFailureException("banco fora do ar"));
+
+            assertThatThrownBy(() -> clientService.debit(client, new BigDecimal("0.25")))
+                    .isInstanceOf(DataAccessResourceFailureException.class);
+        }
     }
 
     @Nested
@@ -181,6 +203,28 @@ class ClientServiceTest {
 
             assertThat(client.getBalance()).isEqualByComparingTo("50.00");
         }
+
+        @Test
+        @DisplayName("com limite zerado, recusa o débito")
+        void zeroLimit() {
+            Client client = postPaidClient(1L, "0.00");
+
+            assertThatThrownBy(() -> clientService.debit(client, new BigDecimal("0.25")))
+                    .isInstanceOf(CreditLimitExceededException.class);
+            verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("saldo alto não salva o pós-pago sem limite")
+        void balanceDoesNotCoverPostPaid() {
+            Client client = postPaidClient(1L, "0.10");
+            client.setBalance(new BigDecimal("100.00"));
+
+            assertThatThrownBy(() -> clientService.debit(client, new BigDecimal("0.25")))
+                    .isInstanceOf(CreditLimitExceededException.class);
+            assertThat(client.getBalance()).isEqualByComparingTo("100.00");
+            assertThat(client.getLimit()).isEqualByComparingTo("0.10");
+        }
     }
 
     @Nested
@@ -229,6 +273,29 @@ class ClientServiceTest {
             assertThatThrownBy(() -> clientService.create(client))
                     .isInstanceOf(DocumentAlreadyExistsException.class);
             verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("recusa CNPJ com 11 dígitos")
+        void cnpjWithCpfLength() {
+            Client client = prePaidClient(null, "10.00");
+            client.setDocumentType(ClientDocumentType.CNPJ);
+
+            assertThatThrownBy(() -> clientService.create(client))
+                    .isInstanceOf(InvalidDocumentException.class)
+                    .hasMessage("CNPJ deve ter 14 dígitos.");
+            verify(clientRepository, never()).existsByDocument(any());
+            verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("cadastro simultâneo do mesmo documento: a violação da constraint unique propaga")
+        void concurrentDuplicate() {
+            Client client = prePaidClient(null, "10.00");
+            when(clientRepository.save(client)).thenThrow(new DataIntegrityViolationException("uk_clients_document"));
+
+            assertThatThrownBy(() -> clientService.create(client))
+                    .isInstanceOf(DataIntegrityViolationException.class);
         }
     }
 
@@ -309,6 +376,17 @@ class ClientServiceTest {
 
             assertThatThrownBy(() -> clientService.updateName(2L, "Outro"))
                     .isInstanceOf(ClientAccessDeniedException.class);
+            verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("updateName de cliente que não existe mais lança not found sem salvar")
+        void updateMissingClient() {
+            AuthenticatedClient.login(1L);
+            when(clientRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> clientService.updateName(1L, "Novo Nome"))
+                    .isInstanceOf(ReferencedEntityNotFoundException.class);
             verify(clientRepository, never()).save(any());
         }
     }
