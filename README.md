@@ -1,5 +1,7 @@
 # BCB - Big Chat Brasil
 
+[![CI](https://github.com/CarlosLonghi/BCB-Challenge-Irrah-Tech/actions/workflows/ci.yml/badge.svg)](https://github.com/CarlosLonghi/BCB-Challenge-Irrah-Tech/actions/workflows/ci.yml)
+
 Plataforma de chat para comunicação entre empresas e seus clientes, com cobrança por mensagem (pré-pago e pós-pago) e dois níveis de prioridade (normal e urgente). Solução do desafio **Fullstack** da Irrah Tech ([enunciado](https://github.com/irrahgroup/irrah-tech-challenges/blob/main/docs/fullstack.md)).
 
 
@@ -91,6 +93,21 @@ cd frontend
 npm test            # Vitest + Testing Library
 ```
 
+### CI e fluxo de contribuição
+
+O GitHub Actions (`.github/workflows/ci.yml`) roda em todo PR para a `main` e em cada push nela, com dois jobs:
+
+- **backend:** `mvnw verify` (unitários, integração com Testcontainers e cobertura mínima do JaCoCo); os relatórios ficam como artefato da execução.
+- **frontend:** `npm ci`, `lint`, `test` e `build`.
+
+A `main` é protegida: não aceita push direto nem force-push. Toda alteração vai numa branch própria e entra por PR, que só pode ser mergeado com os dois jobs verdes e a branch atualizada com a `main`.
+
+```bash
+git checkout -b feat/minha-alteracao
+git push -u origin feat/minha-alteracao
+gh pr create
+```
+
 ## Estrutura
 
 ```
@@ -105,7 +122,7 @@ docker-compose.yaml
 - **Backend:** Java 21, Spring Boot 4.1 (Web, Security, Data JPA, Validation, AMQP, Actuator), PostgreSQL, Flyway, RabbitMQ, MapStruct, Lombok, springdoc-openapi 3 (Swagger)
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 18 + TypeScript + Vite, React Router, CSS Modules, Vitest + Testing Library, ícones Phosphor; servido por nginx no Docker
-- **Infra:** Docker Compose
+- **Infra:** Docker Compose, GitHub Actions (CI)
 
 ## Funcionalidades
 
