@@ -27,7 +27,7 @@ class ClientRepositoryLockIT extends IntegrationTest {
     @Test
     @DisplayName("findWithLockById trava a linha: uma segunda transação espera a primeira terminar")
     void secondTransactionWaitsForLock() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         CountDownLatch firstLocked = new CountDownLatch(1);
         CountDownLatch releaseFirst = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -60,7 +60,7 @@ class ClientRepositoryLockIT extends IntegrationTest {
     @Test
     @DisplayName("findById comum não trava: a leitura não espera a transação que segura o lock")
     void plainReadDoesNotWait() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         CountDownLatch firstLocked = new CountDownLatch(1);
         CountDownLatch releaseFirst = new CountDownLatch(1);
         ExecutorService executor = Executors.newSingleThreadExecutor();

@@ -31,9 +31,9 @@ class AuthServiceTest {
     @DisplayName("authenticate devolve o cliente ativo do documento")
     void authenticatesActiveClient() {
         Client client = prePaidClient(1L, "10.00");
-        when(clientRepository.findByDocument("12345678901")).thenReturn(Optional.of(client));
+        when(clientRepository.findByDocument("12345678909")).thenReturn(Optional.of(client));
 
-        assertThat(authService.authenticate("12345678901")).isSameAs(client);
+        assertThat(authService.authenticate("12345678909")).isSameAs(client);
     }
 
     @Test
@@ -41,9 +41,9 @@ class AuthServiceTest {
     void rejectsInactiveClient() {
         Client client = prePaidClient(1L, "10.00");
         client.setActive(false);
-        when(clientRepository.findByDocument("12345678901")).thenReturn(Optional.of(client));
+        when(clientRepository.findByDocument("12345678909")).thenReturn(Optional.of(client));
 
-        assertThatThrownBy(() -> authService.authenticate("12345678901"))
+        assertThatThrownBy(() -> authService.authenticate("12345678909"))
                 .isInstanceOf(ClientNotActiveException.class);
     }
 
@@ -78,9 +78,9 @@ class AuthServiceTest {
     void inactiveClientGetsNoToken() {
         Client client = prePaidClient(1L, "10.00");
         client.setActive(false);
-        when(clientRepository.findByDocument("12345678901")).thenReturn(Optional.of(client));
+        when(clientRepository.findByDocument("12345678909")).thenReturn(Optional.of(client));
 
-        assertThatThrownBy(() -> authService.authenticate("12345678901"))
+        assertThatThrownBy(() -> authService.authenticate("12345678909"))
                 .isInstanceOf(ClientNotActiveException.class)
                 .hasMessage("Cliente inativo.");
     }

@@ -36,10 +36,10 @@ Se preferir a API (endpoint público):
 ```bash
 curl -X POST http://localhost:8080/clients \
   -H "Content-Type: application/json" \
-  -d '{"name":"Empresa Exemplo","document":"12345678901","documentType":"CPF","planType":"PRE_PAID","balance":10.00,"limit":0,"active":true}'
+  -d '{"name":"Empresa Exemplo","document":"12345678909","documentType":"CPF","planType":"PRE_PAID","balance":10.00,"limit":0,"active":true}'
 ```
 
-Depois entre no frontend com o documento `12345678901`.
+Depois entre no frontend com o documento `12345678909`.
 
 ### Desenvolvimento do frontend (sem Docker)
 

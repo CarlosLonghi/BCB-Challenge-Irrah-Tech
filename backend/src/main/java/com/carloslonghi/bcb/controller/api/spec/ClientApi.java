@@ -54,7 +54,7 @@ public interface ClientApi {
                                             value = """
                                                     {
                                                       "name": "Empresa Exemplo 1",
-                                                      "document": "12345678000190",
+                                                      "document": "11222333000181",
                                                       "documentType": "CNPJ",
                                                       "planType": "PRE_PAID",
                                                       "balance": 100.0,
@@ -68,7 +68,7 @@ public interface ClientApi {
                                             value = """
                                                     {
                                                       "name": "Empresa Exemplo 2",
-                                                      "document": "12345678000190",
+                                                      "document": "11222333000181",
                                                       "documentType": "CNPJ",
                                                       "planType": "POST_PAID",
                                                       "balance": 0.0,

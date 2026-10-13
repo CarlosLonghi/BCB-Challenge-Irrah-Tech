@@ -40,7 +40,7 @@ class SchemaIT extends IntegrationTest {
     void enumCheckConstraint() {
         assertThatThrownBy(() -> jdbcTemplate.update("""
                 INSERT INTO tb_clients (name, document, document_type, plan_type, balance, client_limit, active, created_at, updated_at)
-                VALUES ('X', '12345678901', 'RG', 'PRE_PAID', 0, 0, true, now(), now())
+                VALUES ('X', '12345678909', 'RG', 'PRE_PAID', 0, 0, true, now(), now())
                 """))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }

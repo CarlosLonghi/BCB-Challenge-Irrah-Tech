@@ -16,7 +16,7 @@ class PendingMessagesRecoveryIT extends IntegrationTest {
     @Test
     @DisplayName("mensagens PROCESSING e SENT esquecidas voltam para a fila e são entregues")
     void requeuesAndDelivers() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         jdbcTemplate.update("""
                 INSERT INTO tb_conversations (client_id, recipient_id, recipient_name, last_message_content, last_message_time, unread_count)
                 VALUES (?, 55, 'Maria Souza', 'Oi', now(), 0)

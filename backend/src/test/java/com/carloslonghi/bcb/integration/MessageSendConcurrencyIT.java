@@ -24,8 +24,8 @@ class MessageSendConcurrencyIT extends IntegrationTest {
     @Test
     @DisplayName("envios simultâneos com saldo para uma só mensagem: só um é cobrado, os outros recebem 402")
     void concurrentSendsDoNotDoubleSpend() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "0.25");
-        String token = login("12345678901");
+        Long clientId = createPrePaidClient("12345678909", "0.25");
+        String token = login("12345678909");
         String body = messageJson(null, 55, "Maria Souza", "NORMAL");
 
         ExecutorService executor = Executors.newFixedThreadPool(REQUESTS);

@@ -235,7 +235,7 @@ class ClientServiceTest {
         @DisplayName("salva CPF com 11 dígitos")
         void savesCpf() {
             Client client = prePaidClient(null, "10.00");
-            when(clientRepository.existsByDocument("12345678901")).thenReturn(false);
+            when(clientRepository.existsByDocument("12345678909")).thenReturn(false);
             when(clientRepository.save(client)).thenReturn(client);
 
             assertThat(clientService.create(client)).isSameAs(client);
@@ -246,7 +246,7 @@ class ClientServiceTest {
         void savesCnpj() {
             Client client = prePaidClient(null, "10.00");
             client.setDocumentType(ClientDocumentType.CNPJ);
-            client.setDocument("12345678000199");
+            client.setDocument("11222333000181");
             when(clientRepository.save(client)).thenReturn(client);
 
             assertThat(clientService.create(client)).isSameAs(client);
@@ -256,7 +256,7 @@ class ClientServiceTest {
         @DisplayName("recusa documento que não combina com o tipo")
         void invalidDocumentLength() {
             Client client = prePaidClient(null, "10.00");
-            client.setDocument("12345678000199");
+            client.setDocument("11222333000181");
 
             assertThatThrownBy(() -> clientService.create(client))
                     .isInstanceOf(InvalidDocumentException.class)
@@ -268,7 +268,7 @@ class ClientServiceTest {
         @DisplayName("recusa documento já cadastrado")
         void duplicatedDocument() {
             Client client = prePaidClient(null, "10.00");
-            when(clientRepository.existsByDocument("12345678901")).thenReturn(true);
+            when(clientRepository.existsByDocument("12345678909")).thenReturn(true);
 
             assertThatThrownBy(() -> clientService.create(client))
                     .isInstanceOf(DocumentAlreadyExistsException.class);
@@ -285,6 +285,32 @@ class ClientServiceTest {
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessage("CNPJ deve ter 14 dígitos.");
             verify(clientRepository, never()).existsByDocument(any());
+            verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("recusa CPF com dígito verificador inválido")
+        void invalidCpfCheckDigit() {
+            Client client = prePaidClient(null, "10.00");
+            client.setDocument("12345678901");
+
+            assertThatThrownBy(() -> clientService.create(client))
+                    .isInstanceOf(InvalidDocumentException.class)
+                    .hasMessage("CPF inválido.");
+            verify(clientRepository, never()).existsByDocument(any());
+            verify(clientRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("recusa CNPJ com dígito verificador inválido")
+        void invalidCnpjCheckDigit() {
+            Client client = prePaidClient(null, "10.00");
+            client.setDocumentType(ClientDocumentType.CNPJ);
+            client.setDocument("11222333000182");
+
+            assertThatThrownBy(() -> clientService.create(client))
+                    .isInstanceOf(InvalidDocumentException.class)
+                    .hasMessage("CNPJ inválido.");
             verify(clientRepository, never()).save(any());
         }
 

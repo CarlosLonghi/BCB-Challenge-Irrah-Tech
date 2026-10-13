@@ -28,7 +28,7 @@ public final class TestData {
         Client client = new Client();
         client.setId(id);
         client.setName("Cliente " + id);
-        client.setDocument("12345678901");
+        client.setDocument("12345678909");
         client.setDocumentType(ClientDocumentType.CPF);
         client.setPlanType(planType);
         client.setBalance(balance);
