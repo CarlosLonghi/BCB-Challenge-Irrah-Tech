@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 
 @Tag(name = "Autenticação")
 public interface AuthApi {
-    @Operation(summary = "Autenticar Cliente", description = "Gera um token para acesso às demais rotas")
+    @Operation(summary = "Autenticar Cliente", description = "Confere documento e senha e gera um JWT para acesso às demais rotas")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -25,7 +25,7 @@ public interface AuthApi {
             ),
             @ApiResponse(
                     responseCode = "401",
-                    description = "Documento não cadastrado",
+                    description = "Documento ou senha inválidos",
                     content = @Content
             ),
             @ApiResponse(
@@ -35,7 +35,7 @@ public interface AuthApi {
             )
     })
     ResponseEntity<AuthResponse> authenticate(
-            @RequestBody(description = "Documento (CPF ou CNPJ)", required = true)
+            @RequestBody(description = "Documento (CPF ou CNPJ) e senha", required = true)
             AuthRequest request
     );
 }

@@ -24,7 +24,7 @@ public class AuthController implements AuthApi {
 
     @PostMapping
     public ResponseEntity<AuthResponse> authenticate(@Valid @RequestBody AuthRequest request) {
-        Client client = authService.authenticate(request.document());
+        Client client = authService.authenticate(request.document(), request.password());
         String token = authService.createToken(client.getId());
 
         return ResponseEntity.ok(new AuthResponse(token, clientMapper.toResponse(client)));

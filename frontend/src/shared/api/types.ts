@@ -18,8 +18,8 @@ export interface Client {
   active: boolean;
 }
 
-/** Corpo de POST /clients (o id é gerado pelo servidor). */
-export type NewClient = Omit<Client, 'id'>;
+/** Corpo de POST /clients (o id é gerado pelo servidor; a senha só vai na ida). */
+export type NewClient = Omit<Client, 'id'> & { password: string };
 
 export interface AuthResponse {
   token: string;

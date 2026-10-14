@@ -15,9 +15,9 @@ class ClientIT extends IntegrationTest {
 
     private static String clientJson(String document, String documentType, String balance) {
         return """
-                {"name": "Ana", "document": "%s", "documentType": "%s", "planType": "PRE_PAID",
+                {"name": "Ana", "document": "%s", "password": "%s", "documentType": "%s", "planType": "PRE_PAID",
                  "balance": %s, "limit": 0, "active": true}
-                """.formatted(document, documentType, balance);
+                """.formatted(document, PASSWORD, documentType, balance);
     }
 
     @Test
@@ -27,9 +27,24 @@ class ClientIT extends IntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.balance").value(10.00))
-                .andExpect(jsonPath("$.planType").value("PRE_PAID"));
+                .andExpect(jsonPath("$.planType").value("PRE_PAID"))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
         assertThat(count("tb_clients")).isEqualTo(1);
+        String hash = jdbcTemplate.queryForObject("SELECT password_hash FROM tb_clients", String.class);
+        assertThat(hash).startsWith("$2").isNotEqualTo(PASSWORD);
+    }
+
+    @Test
+    @DisplayName("senha com menos de 8 caracteres responde 400")
+    void shortPassword() throws Exception {
+        String body = clientJson("12345678909", "CPF", "1.00").replace(PASSWORD, "curta");
+
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Senha deve ter entre 8 e 72 caracteres"));
+        assertThat(count("tb_clients")).isZero();
     }
 
     @Test
@@ -64,7 +79,7 @@ class ClientIT extends IntegrationTest {
     @DisplayName("payload inválido responde 400 com as mensagens de todos os campos")
     void invalidPayload() throws Exception {
         String body = """
-                {"name": "", "document": "12345678909", "documentType": "CPF", "planType": "PRE_PAID",
+                {"name": "", "document": "12345678909", "password": "senha-forte-123", "documentType": "CPF", "planType": "PRE_PAID",
                  "balance": -1, "limit": 0}
                 """;
 

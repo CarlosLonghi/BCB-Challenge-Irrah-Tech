@@ -16,7 +16,7 @@ import java.util.List;
         name = "bearerAuth",
         type = SecuritySchemeType.HTTP,
         scheme = "bearer",
-        bearerFormat = "UUID"
+        bearerFormat = "JWT"
 )
 public class SwaggerConfig {
 
@@ -36,8 +36,8 @@ public class SwaggerConfig {
                                         
                                         1. Criar um cliente na rota: "POST `/clients`"
                                         
-                                        2. Autenticar o cliente na rota: "POST `/auth`" usando CPF/CNPJ  
-                                           - Copie o token retornado (UUID)  
+                                        2. Autenticar o cliente na rota: "POST `/auth`" com CPF/CNPJ e senha  
+                                           - Copie o token retornado (JWT, válido por 8 horas)  
                                            
                                         3. Autorizar no Swagger
                                            - Clique em "Authorize" (canto inferior direito)  
@@ -49,7 +49,7 @@ public class SwaggerConfig {
                         )
                 )
                 .tags(List.of(
-                        new Tag().name("Autenticação").description("Operações de login via CPF/CNPJ"),
+                        new Tag().name("Autenticação").description("Login com CPF/CNPJ e senha"),
                         new Tag().name("Clientes").description("Operações de CRUD e consulta de saldo"),
                         new Tag().name("Mensagens").description("Operações de envio e consulta de mensagens"),
                         new Tag().name("Conversas").description("Operações de consulta de conversas e mensagens"),

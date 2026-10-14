@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -40,6 +41,8 @@ class ClientServiceTest {
 
     @Mock
     private ClientRepository clientRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private ClientService clientService;
@@ -232,13 +235,15 @@ class ClientServiceTest {
     class Create {
 
         @Test
-        @DisplayName("salva CPF com 11 dígitos")
+        @DisplayName("salva CPF com 11 dígitos e guarda só o hash da senha")
         void savesCpf() {
             Client client = prePaidClient(null, "10.00");
             when(clientRepository.existsByDocument("12345678909")).thenReturn(false);
+            when(passwordEncoder.encode("senha-forte-123")).thenReturn("hash-bcrypt");
             when(clientRepository.save(client)).thenReturn(client);
 
-            assertThat(clientService.create(client)).isSameAs(client);
+            assertThat(clientService.create(client, "senha-forte-123")).isSameAs(client);
+            assertThat(client.getPasswordHash()).isEqualTo("hash-bcrypt");
         }
 
         @Test
@@ -249,7 +254,7 @@ class ClientServiceTest {
             client.setDocument("11222333000181");
             when(clientRepository.save(client)).thenReturn(client);
 
-            assertThat(clientService.create(client)).isSameAs(client);
+            assertThat(clientService.create(client, "senha-forte-123")).isSameAs(client);
         }
 
         @Test
@@ -258,7 +263,7 @@ class ClientServiceTest {
             Client client = prePaidClient(null, "10.00");
             client.setDocument("11222333000181");
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessage("CPF deve ter 11 dígitos.");
             verify(clientRepository, never()).save(any());
@@ -270,7 +275,7 @@ class ClientServiceTest {
             Client client = prePaidClient(null, "10.00");
             when(clientRepository.existsByDocument("12345678909")).thenReturn(true);
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(DocumentAlreadyExistsException.class);
             verify(clientRepository, never()).save(any());
         }
@@ -281,7 +286,7 @@ class ClientServiceTest {
             Client client = prePaidClient(null, "10.00");
             client.setDocumentType(ClientDocumentType.CNPJ);
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessage("CNPJ deve ter 14 dígitos.");
             verify(clientRepository, never()).existsByDocument(any());
@@ -294,7 +299,7 @@ class ClientServiceTest {
             Client client = prePaidClient(null, "10.00");
             client.setDocument("12345678901");
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessage("CPF inválido.");
             verify(clientRepository, never()).existsByDocument(any());
@@ -308,7 +313,7 @@ class ClientServiceTest {
             client.setDocumentType(ClientDocumentType.CNPJ);
             client.setDocument("11222333000182");
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(InvalidDocumentException.class)
                     .hasMessage("CNPJ inválido.");
             verify(clientRepository, never()).save(any());
@@ -320,7 +325,7 @@ class ClientServiceTest {
             Client client = prePaidClient(null, "10.00");
             when(clientRepository.save(client)).thenThrow(new DataIntegrityViolationException("uk_clients_document"));
 
-            assertThatThrownBy(() -> clientService.create(client))
+            assertThatThrownBy(() -> clientService.create(client, "senha-forte-123"))
                     .isInstanceOf(DataIntegrityViolationException.class);
         }
     }

@@ -5,7 +5,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 
-// Simula o que o TokenAuthenticationFilter faz: o id do cliente vira o principal do contexto
+// Simula o que o resource server faz com o JWT: o id do cliente vira o principal do contexto
 public final class AuthenticatedClient {
 
     private AuthenticatedClient() {

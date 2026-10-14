@@ -10,12 +10,13 @@ import { useAuth } from './useAuth';
 export function LoginPage() {
   const { session, expired, signIn } = useAuth();
   const [document, setDocument] = useState('');
-  const loginAction = useAction(async (digits: string) => signIn(await login(digits)));
+  const [password, setPassword] = useState('');
+  const loginAction = useAction(async (digits: string) => signIn(await login(digits, password)));
 
   if (session) return <Navigate to="/" replace />;
 
   const digits = onlyDigits(document);
-  const isValid = digits.length === 11 || digits.length === 14;
+  const isValid = (digits.length === 11 || digits.length === 14) && password.length > 0;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -27,7 +28,7 @@ export function LoginPage() {
     <AuthCard
       eyebrow="Acesso do cliente"
       title="Entrar"
-      subtitle="Use o CPF ou CNPJ cadastrado da empresa."
+      subtitle="Use o CPF ou CNPJ cadastrado da empresa e a sua senha."
       onSubmit={handleSubmit}
       footer={
         <>
@@ -50,7 +51,18 @@ export function LoginPage() {
           className="mono"
           inputMode="numeric"
           placeholder="000.000.000-00"
+          autoComplete="username"
           autoFocus
+        />
+      </label>
+
+      <label>
+        Senha
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
       </label>
 

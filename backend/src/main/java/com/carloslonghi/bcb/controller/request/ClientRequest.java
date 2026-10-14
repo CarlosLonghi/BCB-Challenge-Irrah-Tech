@@ -22,6 +22,11 @@ public record ClientRequest(
         @Pattern(regexp = "\\d{11}|\\d{14}", message = "Documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos, só números")
         String document,
 
+        @Schema(description = "Senha de acesso, de 8 a 72 caracteres", example = "minha-senha-123")
+        @NotBlank(message = "Senha é obrigatória")
+        @Size(min = 8, max = 72, message = "Senha deve ter entre 8 e 72 caracteres")
+        String password,
+
         @NotNull(message = "Tipo de documento é obrigatório (CPF ou CNPJ)")
         ClientDocumentType documentType,
 

@@ -7,7 +7,13 @@ import { SegmentedControl, type SegmentedOption } from '@/shared/components/Segm
 import { formatDocument } from '@/shared/utils/format';
 import { createClient, login } from './api';
 import { AuthCard } from './AuthCard';
-import { INITIAL_REGISTER_FORM, toNewClient, validateRegisterForm, type RegisterForm } from './registerForm';
+import {
+  INITIAL_REGISTER_FORM,
+  PASSWORD_MAX_LENGTH,
+  toNewClient,
+  validateRegisterForm,
+  type RegisterForm,
+} from './registerForm';
 import { useAuth } from './useAuth';
 
 const PLAN_OPTIONS: SegmentedOption<PlanType>[] = [
@@ -20,11 +26,11 @@ export function RegisterPage() {
   const [form, setForm] = useState<RegisterForm>(INITIAL_REGISTER_FORM);
   const [errors, setErrors] = useState<string[]>([]);
 
-  // Cadastra e já entra: quem acabou de se cadastrar não precisa redigitar o documento.
+  // Cadastra e já entra: quem acabou de se cadastrar não precisa redigitar documento e senha.
   // As duas chamadas são sequenciais de propósito: o login depende do cliente criado.
   const register = useAction(async (client: NewClient) => {
     const created = await createClient(client);
-    signIn(await login(created.document));
+    signIn(await login(created.document, client.password));
   });
 
   if (session) return <Navigate to="/" replace />;
@@ -82,6 +88,29 @@ export function RegisterPage() {
             className="mono"
             inputMode="numeric"
             placeholder={form.documentType === 'CPF' ? '000.000.000-00' : '00.000.000/0000-00'}
+          />
+        </label>
+      </div>
+
+      <div className="form-row">
+        <label className="form-row__grow">
+          Senha
+          <input
+            type="password"
+            value={form.password}
+            onChange={(e) => update('password', e.target.value)}
+            maxLength={PASSWORD_MAX_LENGTH}
+            autoComplete="new-password"
+          />
+        </label>
+        <label className="form-row__grow">
+          Confirmar senha
+          <input
+            type="password"
+            value={form.passwordConfirmation}
+            onChange={(e) => update('passwordConfirmation', e.target.value)}
+            maxLength={PASSWORD_MAX_LENGTH}
+            autoComplete="new-password"
           />
         </label>
       </div>

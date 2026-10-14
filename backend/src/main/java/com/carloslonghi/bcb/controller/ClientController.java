@@ -26,7 +26,7 @@ public class ClientController implements ClientApi {
 
     @PostMapping("/clients")
     public ResponseEntity<ClientResponse> create(@Valid @RequestBody ClientRequest request) {
-        Client clientCreated = clientService.create(clientMapper.toEntity(request));
+        Client clientCreated = clientService.create(clientMapper.toEntity(request), request.password());
         return ResponseEntity.status(HttpStatus.CREATED).body(clientMapper.toResponse(clientCreated));
     }
 
