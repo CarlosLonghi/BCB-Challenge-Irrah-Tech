@@ -56,7 +56,7 @@ export async function request<T>(path: string, { method = 'GET', body, auth = tr
   }
 
   if (!response.ok) {
-    // Em rota autenticada, 401 = token inválido (ex.: backend reiniciou): encerra a sessão.
+    // Em rota autenticada, 401 = token inválido ou vencido: encerra a sessão.
     if (response.status === 401 && auth) unauthorizedHandler?.();
     throw new ApiError(response.status, await errorMessage(response));
   }
