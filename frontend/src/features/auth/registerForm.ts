@@ -1,4 +1,5 @@
 import type { DocumentType, NewClient, PlanType } from '@/shared/api/types';
+import { isValidDocument } from '@/shared/utils/document';
 import { onlyDigits } from '@/shared/utils/format';
 
 // Regras do formulário de cadastro, separadas da tela para poder testar sem renderizar.
@@ -34,9 +35,12 @@ export function validateRegisterForm(form: RegisterForm): string[] {
   if (!name) errors.push('Informe o nome.');
   if (name.length > 150) errors.push('O nome pode ter até 150 caracteres.');
 
+  const document = onlyDigits(form.document);
   const expected = DOCUMENT_LENGTH[form.documentType];
-  if (onlyDigits(form.document).length !== expected) {
+  if (document.length !== expected) {
     errors.push(`O ${form.documentType} deve ter ${expected} dígitos.`);
+  } else if (!isValidDocument(form.documentType, document)) {
+    errors.push(`${form.documentType} inválido.`);
   }
 
   const amount = parseAmount(form.amount);
