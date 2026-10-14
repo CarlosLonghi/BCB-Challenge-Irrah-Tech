@@ -25,3 +25,8 @@ dist-ssr
 
 # Variáveis locais
 .env
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
