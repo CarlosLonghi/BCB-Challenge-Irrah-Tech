@@ -35,12 +35,12 @@ Tudo sobe com `docker compose up --build` (`docker-compose.yaml`).
 | `entity`, `entity/enums` | Entidades JPA (`Client`, `Conversation`, `Message`) e enums | Mudou aqui → migration nova (ver CLAUDE.md) |
 | `mapper` | MapStruct entidade ↔ DTO | Conversões |
 | `infra/queue` | `MessageQueue` (interface), `RabbitMessageQueue`, `PendingMessagesRecovery` (inicialização + rotina periódica) | Publicação na fila |
-| `infra/worker` | `RabbitMessageListener` (consumidor) e `MessageProcessor` (ciclo de status) | Processamento assíncrono |
+| `infra/worker` | `RabbitMessageListener` (consumidor), `MessageProcessor` (ciclo de status) e `ReadSimulator` (leitura simulada) | Processamento assíncrono |
 | `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`), `AppConfig` (`Clock`, `@EnableScheduling`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
 | `exception` | Exceções de negócio, uma por caso | Erro novo: exceção + handler no advice |
 | `utils` | `DocumentValidator` (dígitos de CPF/CNPJ) | Funções puras |
 
-Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_schema.sql`, `V2__add_client_password.sql`, `V3__add_message_enqueued_at.sql`, `V4__create_ledger_entries.sql`). Config: `backend/src/main/resources/application.properties`, mais `application-dev.properties`, o perfil padrão quando nenhum está ativo (SQL no log, DEBUG do Security, segredo JWT de dev).
+Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_schema.sql`, `V2__add_client_password.sql`, `V3__add_message_enqueued_at.sql`, `V4__create_ledger_entries.sql`, `V5__add_indexes.sql`, `V6__align_column_types.sql`, `V7__add_message_delivered_at.sql`). Config: `backend/src/main/resources/application.properties`, mais `application-dev.properties`, o perfil padrão quando nenhum está ativo (SQL no log, DEBUG do Security, segredo JWT de dev).
 
 ## Fluxos principais
 
@@ -61,8 +61,9 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 ### Processamento
 1. `RabbitMessageQueue` publica só o id, com prioridade AMQP 10 (urgente) ou 1 (normal), na fila `bcb.messages` (`x-max-priority` 10).
 2. `RabbitMessageListener` consome com `prefetch=1` e um consumidor: uma mensagem por vez, e as urgentes passam na frente das normais que estão esperando.
-3. `MessageProcessor.process`: `PROCESSING` → `SENT` → `DELIVERED`, gravando cada etapa com `MessageRepository.updateStatus` (pausa `bcb.worker.step-delay-ms`, padrão 4000; os testes zeram). Mensagem já finalizada é ignorada (idempotente).
-4. Exceção → retry do Spring (3 tentativas no total). Esgotadas, o `MessageRecoverer` do `RabbitConfig` chama `MessageService.failAndRefund` e rejeita, e a mensagem vai para a `bcb.messages.dlq`. O `failAndRefund` (uma transação) trava o cliente, passa a mensagem de `QUEUED`/`PROCESSING`/`SENT` para `FAILED` com um update condicional (`updateStatusIfIn`) e, só se essa transição aconteceu, devolve o `cost` (`ClientService.refund`) e registra o `REFUND`. Uma segunda passagem pela mesma mensagem não estorna de novo.
+3. `MessageProcessor.process`: `PROCESSING` → `SENT` → `DELIVERED`, gravando cada etapa com `MessageRepository.updateStatus` e a entrega com `markDelivered`, que grava também `delivered_at` (pausa `bcb.worker.step-delay-ms`, padrão 4000; os testes zeram). Mensagem já finalizada é ignorada (idempotente).
+4. Leitura simulada: o `ReadSimulator` (`@Scheduled`, `bcb.simulation.read-interval` 2s) passa para `READ`, num update só, as `DELIVERED` com `delivered_at` anterior a `bcb.simulation.read-after` (4s). Ele fica fora do worker para não prender o consumidor e para alcançar também as mensagens entregues antes de um restart. Sai quando houver recebimento real de mensagens (`READ` e `unreadCount` ficam no modelo por isso).
+5. Exceção → retry do Spring (3 tentativas no total). Esgotadas, o `MessageRecoverer` do `RabbitConfig` chama `MessageService.failAndRefund` e rejeita, e a mensagem vai para a `bcb.messages.dlq`. O `failAndRefund` (uma transação) trava o cliente, passa a mensagem de `QUEUED`/`PROCESSING`/`SENT` para `FAILED` com um update condicional (`updateStatusIfIn`) e, só se essa transição aconteceu, devolve o `cost` (`ClientService.refund`) e registra o `REFUND`. Uma segunda passagem pela mesma mensagem não estorna de novo.
 
 ### Extrato
 `tb_ledger_entries` (`LedgerEntry`, `LedgerService`) tem um `DEBIT` por envio e um `REFUND` por mensagem que falhou, sempre gravados na mesma transação que altera saldo/limite. `GET /clients/{id}/ledger` lista do mais recente para o mais antigo; outro cliente → 403. O crédito inicial do cadastro não vira lançamento.
@@ -76,7 +77,16 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 `ApplicationControllerAdvice` converte exceções de negócio em `ErrorResponse` (400 validação/documento, 401, 402, 403, 404, 409). O que não passa por controller (401 de token, rota inexistente) sai pelo `/error` do Spring Boot no mesmo formato JSON (`spring.web.error.include-message=always`).
 
 ### Fila (consulta)
-`GET /queue/status` (`QueueStatusService`) conta mensagens por status e prioridade direto no banco, não no RabbitMQ.
+`GET /queue/status` (`QueueStatusService`) conta mensagens por status e prioridade direto no banco (um `GROUP BY status, priority` em `MessageRepository.countByStatusAndPriority`), não no RabbitMQ.
+
+### Paginação
+- As listas devolvem arrays de no máximo `limit` itens (padrão 50, ajustado para 1..100 por `utils/PageLimit`, sem 400).
+- Por cursor `before=<id>` (exclusivo): `GET /conversations/{id}/messages` devolve as mais recentes antes do cursor em ordem **crescente**; `GET /messages` e `GET /clients/{id}/ledger` em ordem decrescente.
+- `GET /conversations` usa `page`/`size`, porque a ordem por `lastMessageTime` muda a cada envio e não serve de cursor.
+- Índices dessas consultas na `V5__add_indexes.sql`.
+
+### JPA
+`@ManyToOne` são `LAZY` e `spring.jpa.open-in-view=false`: associação lida fora de transação falha em vez de virar query escondida. Os mappers só leem o id das associações (`conversation.id`, `sender.id`, `client.id`, `message.id`), o que não inicializa o proxy. O `PaginationIT.noNPlusOne` garante que listar mensagens de várias conversas não faz uma query por conversa.
 
 ## Frontend (`frontend/src`)
 
@@ -85,23 +95,24 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 | `app/` | `App.tsx` (rotas), `AppDataProvider` (saldo e conversas do cliente logado, compartilhados pela tela), `layout/` (cabeçalho, layout, tela vazia) |
 | `features/auth` | Login, cadastro (`registerForm.ts`), `AuthProvider`, `ProtectedRoute` |
 | `features/conversations` | Lista, item e nova conversa |
-| `features/chat` | `ChatPage`, lista de mensagens, composer, ícone de status, `useMessages` (polling), `useSendMessage`, `messageRules.ts` |
+| `features/chat` | `ChatPage`, lista de mensagens ("Carregar anteriores", rolagem preservada), composer, ícone de status, `useMessages` (página recente com polling + páginas antigas), `useSendMessage`, `messageRules.ts` |
 | `features/account` | API de saldo (`GET /clients/{id}/balance`) |
 | `shared/api` | `http.ts` (fetch + token + erros), `session.ts`, `types.ts` (tipos do contrato da API) |
 | `shared/hooks` | `useFetch` e `useAction`, no lugar de TanStack Query |
 | `shared/components`, `shared/utils` | Componentes genéricos; `document.ts` (máscara e validação de CPF/CNPJ), `format.ts` |
 | `styles/global.css` | Tokens visuais (cores, fontes IBM Plex) |
 
-Rotas: `/login`, `/cadastro`, e dentro do layout protegido `/`, `/conversas/nova`, `/conversas/:id`. Estilo com CSS Modules (`*.module.css` ao lado do componente). Cada feature tem seu `api.ts`. O polling (`POLLING_INTERVAL_MS = 3000` em `messageRules.ts`) só roda enquanto houver mensagem pendente. URL da API em `VITE_API_URL`.
+Rotas: `/login`, `/cadastro`, e dentro do layout protegido `/`, `/conversas/nova`, `/conversas/:id`. Estilo com CSS Modules (`*.module.css` ao lado do componente). Cada feature tem seu `api.ts`. O polling (`POLLING_INTERVAL_MS = 3000` em `messageRules.ts`) rebusca só a página recente e roda enquanto houver mensagem que ainda vai mudar (`QUEUED`, `PROCESSING`, `SENT` ou `DELIVERED`, que vira `READ`). As conversas da barra lateral são paginadas em `features/conversations/useConversationPages.ts` ("Carregar mais"); `shared/api/pagination.ts` tem o `PAGE_SIZE` e o `mergeById`. URL da API em `VITE_API_URL`.
 
 ## Invariantes (não quebrar)
 
 - Débito, mensagem e conversa na mesma transação, com o cliente travado por lock pessimista.
 - Publicar na fila só depois do commit.
 - O worker relê o estado do banco e ignora mensagem finalizada; receber o mesmo id duas vezes não pode reprocessar.
-- Status muda só por updates de coluna do `MessageRepository` (`updateStatus`, `updateStatusIfIn`, `resetToUnpublished`), nunca salvando a entidade inteira, que sobrescreveria com uma cópia antiga.
+- Status muda só por updates de coluna do `MessageRepository` (`updateStatus`, `updateStatusIfIn`, `resetToUnpublished`, `markDelivered`, `markReadDeliveredBefore`), nunca salvando a entidade inteira, que sobrescreveria com uma cópia antiga.
 - Saldo/limite e extrato andam juntos: todo `debit`/`refund` grava o lançamento na mesma transação. Estorno só depois da transição condicional para `FAILED`.
 - Schema só muda por migration Flyway nova; Hibernate em `validate`.
+- `@ManyToOne` sempre `LAZY`, com open-in-view desligado; lista nova sempre paginada.
 - Saldo, limite e plano são definidos só no cadastro; `PUT /clients/{id}` só altera o nome.
 - O contrato da API usa enums em maiúsculas e ids numéricos; frontend (`shared/api/types.ts`) e backend precisam andar juntos.
 
