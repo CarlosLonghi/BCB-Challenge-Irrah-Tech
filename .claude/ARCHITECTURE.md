@@ -36,18 +36,19 @@ Tudo sobe com `docker compose up --build` (`docker-compose.yaml`).
 | `mapper` | MapStruct entidade ↔ DTO | Conversões |
 | `infra/queue` | `MessageQueue` (interface), `RabbitMessageQueue`, `PendingMessagesRecovery` | Publicação na fila |
 | `infra/worker` | `RabbitMessageListener` (consumidor) e `MessageProcessor` (ciclo de status) | Processamento assíncrono |
-| `config` | Segurança, filtro de token, RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
+| `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
 | `exception` | Exceções de negócio, uma por caso | Erro novo: exceção + handler no advice |
 | `utils` | `DocumentValidator` (dígitos de CPF/CNPJ) | Funções puras |
 
-Migrations: `backend/src/main/resources/db/migrations` (hoje só `V1__create_initial_schema.sql`). Config: `backend/src/main/resources/application.properties`.
+Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_schema.sql`, `V2__add_client_password.sql`). Config: `backend/src/main/resources/application.properties`, mais `application-dev.properties`, o perfil padrão quando nenhum está ativo (SQL no log, DEBUG do Security, segredo JWT de dev).
 
 ## Fluxos principais
 
 ### Autenticação
-1. `POST /auth` com o documento → `AuthService.authenticate` (documento não cadastrado → `DocumentNotRegisteredException` → 401; cliente inativo → 403).
-2. `AuthService.createToken` gera um UUID e guarda `token → clientId` num `ConcurrentHashMap` em memória. Sem expiração e sem logout; reiniciar o backend derruba as sessões.
-3. `TokenAuthenticationFilter` lê o `Bearer`, põe o `clientId` como principal e responde 401 antes do controller se faltar ou for desconhecido. Rotas livres: `POST /clients`, `/auth`, `/actuator/health`, Swagger e `OPTIONS`.
+1. `POST /clients` grava a senha como hash BCrypt (`ClientService.create`, `PasswordEncoder` definido no `SecurityConfig`).
+2. `POST /auth` com documento e senha → `AuthService.authenticate`. Documento inexistente, senha errada ou cliente sem senha → `InvalidCredentialsException` → 401, sempre com a mesma mensagem. Cliente inativo → 403.
+3. `AuthService.createToken` emite um JWT HS256 (`sub` = clientId, `exp` = agora + `bcb.security.jwt.ttl`), assinado com `bcb.security.jwt.secret` (`JWT_SECRET`, mín. 32 bytes, checado em `JwtProperties`). Os beans de encoder e decoder ficam em `JwtConfig`. Não há estado no servidor: o token continua valendo depois de um restart, e não há revogação.
+4. O `oauth2ResourceServer` do `SecurityConfig` valida o `Bearer`, põe o `clientId` (`Long`) como principal e responde 401 antes do controller se o token faltar, for inválido ou estiver vencido. As rotas livres ficam só no `SecurityConfig`: `POST /clients`, `POST /auth`, `/actuator/health`, Swagger e `OPTIONS`.
 4. Cada cliente só vê os próprios dados: os services filtram pelo principal (conversa/mensagem de outro cliente vira 404; `/clients/{id}` de outro vira 403).
 
 ### Envio de mensagem (`MessageService.sendMessage`, uma transação)
@@ -67,7 +68,7 @@ Migrations: `backend/src/main/resources/db/migrations` (hoje só `V1__create_ini
 `PendingMessagesRecovery` (no `ApplicationReadyEvent`) volta para `QUEUED` e reenfileira o que ficou em `QUEUED`, `PROCESSING` ou `SENT`, por ordem de criação. Falha numa mensagem não impede as outras.
 
 ### Erros
-`ApplicationControllerAdvice` converte exceções de negócio em `ErrorResponse` (400 validação/documento, 401, 402, 403, 404, 409). O que não passa por controller (401 do filtro, rota inexistente) sai pelo `/error` do Spring Boot no mesmo formato JSON (`spring.web.error.include-message=always`).
+`ApplicationControllerAdvice` converte exceções de negócio em `ErrorResponse` (400 validação/documento, 401, 402, 403, 404, 409). O que não passa por controller (401 de token, rota inexistente) sai pelo `/error` do Spring Boot no mesmo formato JSON (`spring.web.error.include-message=always`).
 
 ### Fila (consulta)
 `GET /queue/status` (`QueueStatusService`) conta mensagens por status e prioridade direto no banco, não no RabbitMQ.
@@ -106,6 +107,6 @@ Rotas: `/login`, `/cadastro`, e dentro do layout protegido `/`, `/conversas/nova
 | Integração backend | `backend/src/test/java/**/integration/*IT.java`, base `IntegrationTest`, Testcontainers (PostgreSQL + RabbitMQ), `application-it.properties` | `sh ./mvnw verify` (precisa do Docker) |
 | Frontend | `*.test.ts(x)` ao lado do código, Vitest + Testing Library | `cd frontend && npm test`, `npm run lint`, `npm run build` |
 
-Helpers: `support/TestData` (fábricas de clientes pré/pós-pago etc.) e `support/AuthenticatedClient` (põe um `clientId` como principal, como o filtro faz). O JaCoCo exige 80% de linhas nos unitários (`verify` falha abaixo disso). Uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT`.
+Helpers: `support/TestData` (fábricas de clientes pré/pós-pago etc.) e `support/AuthenticatedClient` (põe um `clientId` como principal, como o resource server faz). Nos ITs, `IntegrationTest.login` usa a senha `PASSWORD` dos clientes criados por `createClient`. O JaCoCo exige 80% de linhas nos unitários (`verify` falha abaixo disso). Uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT`.
 
 CI (`.github/workflows/ci.yml`): job backend (`mvnw verify`) e job frontend (`npm ci`, `lint`, `test`, `build`) em todo PR para a `main`, que é protegida (só entra por PR com os dois jobs verdes).

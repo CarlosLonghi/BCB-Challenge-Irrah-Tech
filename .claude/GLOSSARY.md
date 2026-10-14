@@ -7,7 +7,7 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Termo | No código | Significado |
 |---|---|---|
 | Cliente | `Client` (`tb_clients`) | Empresa ou pessoa que usa a plataforma e paga pelas mensagens. É quem faz login. Não confundir com o destinatário. |
-| Documento | `Client.document`, `ClientDocumentType` (`CPF`, `CNPJ`) | Identifica o cliente e serve de login (não há senha). Só dígitos: 11 (CPF) ou 14 (CNPJ), com dígitos verificadores checados por `DocumentValidator` (backend) e `shared/utils/document.ts` (frontend). Único. |
+| Documento | `Client.document`, `ClientDocumentType` (`CPF`, `CNPJ`) | Identifica o cliente e, junto com a senha, serve de login. Só dígitos: 11 (CPF) ou 14 (CNPJ), com dígitos verificadores checados por `DocumentValidator` (backend) e `shared/utils/document.ts` (frontend). Único. |
 | Ativo / inativo | `Client.active` | Cliente inativo não consegue logar (403). |
 | Plano | `ClientPlanType` (`PRE_PAID`, `POST_PAID`) | Forma de cobrança. Definido no cadastro e não muda. |
 | Saldo | `Client.balance` | Crédito do pré-pago. Cada envio desconta; sem saldo suficiente → 402. |
@@ -26,7 +26,8 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 
 | Termo | No código | Significado |
 |---|---|---|
-| Token / sessão | `AuthService` (mapa em memória), `TokenAuthenticationFilter` | UUID devolvido pelo `POST /auth`, mandado como `Authorization: Bearer`. Não expira; some ao reiniciar o backend. |
+| Senha | `Client.passwordHash` (`password_hash`), `PasswordEncoder` (BCrypt) | Definida no cadastro (8 a 72 caracteres); só o hash é gravado. Nula em clientes anteriores à V2, que não conseguem entrar. |
+| Token / sessão | `AuthService.createToken`, `JwtConfig`, `oauth2ResourceServer` no `SecurityConfig` | JWT HS256 devolvido pelo `POST /auth` (`sub` = id do cliente), mandado como `Authorization: Bearer`. Expira em 8h (`bcb.security.jwt.ttl`) e continua valendo depois de um restart. |
 | Principal | `SecurityContextHolder...getPrincipal()` | O `Long` id do cliente logado; os services filtram tudo por ele. |
 | Fila | `MessageQueue`, `RabbitMessageQueue`, fila `bcb.messages` | Fila RabbitMQ com prioridade; carrega só o id da mensagem. |
 | DLQ | `bcb.messages.dlq` | Dead-letter queue: onde caem as mensagens que falharam 3 vezes (já marcadas `FAILED`). |

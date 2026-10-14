@@ -10,4 +10,4 @@ _Nenhum._
 
 ## Concluídos
 
-_Nenhum._
+- [2026-10-14-auth-senha-jwt.md](2026-10-14-auth-senha-jwt.md): senha no login e JWT no lugar do token em memória

@@ -29,17 +29,17 @@ Para parar e apagar os dados: `docker compose down -v`.
 
 ### Primeiro acesso
 
-Não há cliente cadastrado no início. Abra http://localhost:3000, clique em **Cadastrar cliente**, preencha nome, CPF/CNPJ, plano e saldo/limite: o cadastro já entra no app.
+Não há cliente cadastrado no início. Abra http://localhost:3000, clique em **Cadastrar cliente**, preencha nome, CPF/CNPJ, senha, plano e saldo/limite: o cadastro já entra no app.
 
 Se preferir a API (endpoint público):
 
 ```bash
 curl -X POST http://localhost:8080/clients \
   -H "Content-Type: application/json" \
-  -d '{"name":"Empresa Exemplo","document":"12345678909","documentType":"CPF","planType":"PRE_PAID","balance":10.00,"limit":0,"active":true}'
+  -d '{"name":"Empresa Exemplo","document":"12345678909","password":"senha-forte-123","documentType":"CPF","planType":"PRE_PAID","balance":10.00,"limit":0,"active":true}'
 ```
 
-Depois entre no frontend com o documento `12345678909`.
+Depois entre no frontend com o documento `12345678909` e a senha `senha-forte-123`.
 
 ### Desenvolvimento do frontend (sem Docker)
 
@@ -76,7 +76,7 @@ sh ./mvnw test      # só os unitários (JUnit + Mockito), sem Docker, em poucos
 sh ./mvnw verify    # unitários + integração (*IT) + checagem de cobertura; precisa do Docker
 ```
 
-- **Unitários** (`src/test/java/.../*Test.java`): services, worker, fila, filtro de token, tratamento de erros, controllers e mappers, com caminhos felizes e de erro. Foco na cobrança: débito de saldo (pré-pago) e de limite (pós-pago), recusa sem saldo/limite e nada gravado nem enfileirado quando o envio falha.
+- **Unitários** (`src/test/java/.../*Test.java`): services, worker, fila, autenticação (senha e JWT), tratamento de erros, controllers e mappers, com caminhos felizes e de erro. Foco na cobrança: débito de saldo (pré-pago) e de limite (pós-pago), recusa sem saldo/limite e nada gravado nem enfileirado quando o envio falha.
 - **Integração** (`src/test/java/.../integration/*IT.java`): a aplicação inteira com banco e fila reais, via HTTP (MockMvc). Cobrem o que mock não enxerga:
   - lock pessimista do cliente (uma segunda transação espera a primeira) e envios simultâneos que não gastam o mesmo saldo duas vezes;
   - transação do envio (falha depois do débito desfaz o débito) e o `updateStatus` com `@Transactional` + `@Modifying`;
@@ -128,7 +128,7 @@ docker-compose.yaml
 
 | Funcionalidade | Estado |
 |---|---|
-| Autenticação por CPF/CNPJ com token Bearer | ✅ |
+| Autenticação por CPF/CNPJ e senha, com JWT no header Bearer | ✅ |
 | Cadastro e consulta de clientes, saldo/limite | ✅ |
 | Conversas e histórico de mensagens | ✅ |
 | Envio com custo (normal R$ 0,25 / urgente R$ 0,50) e débito de saldo/limite | ✅ |
@@ -141,8 +141,8 @@ docker-compose.yaml
 
 ## Premissas
 
-- O documento (CPF/CNPJ) identifica o cliente; não há senha, conforme o enunciado.
-- O token de sessão é um UUID guardado em memória: reiniciar o backend encerra as sessões.
+- O login é feito com documento (CPF/CNPJ) e senha. O enunciado não pedia senha: ela entrou depois da entrega. Clientes cadastrados antes disso ficam sem senha e não conseguem entrar.
+- A sessão é um JWT (HS256) que vale 8 horas e continua valendo depois de um restart do backend. O segredo vem de `JWT_SECRET`, com pelo menos 32 bytes; o perfil `dev` e o docker-compose têm um valor de desenvolvimento.
 - O envio é simulado pelo worker (cada mensagem leva cerca de 8 s até `DELIVERED`).
 - A atualização de status na tela é feita por polling (a cada 3 s, só enquanto há mensagem pendente); não há WebSocket.
 - Para iniciar uma conversa, o contrato exige `recipientId` e `recipientName`. Não há cadastro de destinatários: o backend só armazena o id, e cada envio sem `conversationId` cria uma conversa nova.
@@ -154,13 +154,14 @@ docker-compose.yaml
 - **Fila:** RabbitMQ com prioridade (`x-max-priority`: urgente 10, normal 1), publicando só o id da mensagem, com um consumidor e `prefetch = 1` (uma mensagem por vez, urgentes passam na frente das normais que estão esperando). Fica atrás da interface `MessageQueue`, então o `MessageService` não conhece AMQP. Começou como `PriorityBlockingQueue` em memória; depois da migração essa versão foi removida, porque o `docker-compose` sempre sobe o RabbitMQ.
 - **Falhas no processamento:** 3 tentativas; esgotadas, a mensagem vira `FAILED` e vai para a dead-letter queue `bcb.messages.dlq`. O processamento ignora mensagens já finalizadas, então receber a mesma mensagem duas vezes não a reprocessa.
 - **Recuperação:** ao iniciar, o backend devolve para a fila as mensagens que ficaram em `QUEUED`, `PROCESSING` ou `SENT` (backend derrubado no meio, ou publicação que falhou com o RabbitMQ fora do ar).
-- **Autenticação e erros:** um filtro lê o `Bearer` token, descobre o cliente e responde `401` antes do controller quando o token falta ou é desconhecido. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 do filtro, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
+- **Autenticação e erros:** a senha é guardada como hash BCrypt. O `POST /auth` emite um JWT com o id do cliente no `sub`, e o resource server do Spring Security valida a assinatura e a expiração em toda rota protegida, respondendo `401` antes do controller. Documento inexistente e senha errada dão a mesma mensagem, para não revelar quais documentos estão cadastrados. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 de token, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenviar e sem estorno:** o débito acontece no envio e a falha não devolve o valor; um botão de reenvio cobraria de novo.
 - **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema só envia mensagens e não recebe respostas.
 - **Visual:** IBM Plex Sans/Mono (números sempre em mono), barra azul-marinho, fundo cinza-papel, um único verde para ações; tokens em `frontend/src/styles/global.css`.
 - **Schema:** versionado com Flyway (`backend/src/main/resources/db/migrations`); o Hibernate só valida (`ddl-auto=validate`).
-- **Sessões:** o token não expira e não há logout; vale até o backend reiniciar.
+- **Sessões:** o JWT expira em 8 horas (`bcb.security.jwt.ttl`). Não há refresh token nem revogação no servidor; o logout apaga a sessão do navegador.
+- **Configuração:** sem perfil ativo, a aplicação sobe com `application-dev.properties` (SQL no log, DEBUG do Spring Security, segredo JWT de dev). O docker-compose usa o perfil `docker`. As origens do CORS vêm de `CORS_ALLOWED_ORIGINS`.
 - **Testes do backend:** unitários com Mockito para as regras e de integração com Testcontainers para o que depende de Spring, banco e fila reais (lock, transações, queries, segurança, worker). Os de integração rodam no `verify`, então o `test` continua rápido e sem Docker. A meta de cobertura mede só os unitários, para os de integração não esconderem lacunas neles.
 - **Não implementado:** tipo de mensagem SMS/WhatsApp, reset mensal do limite pós-pago, histórico de transações financeiras, conversão entre planos, administração de créditos (saldo e limite são definidos só no cadastro).
 
