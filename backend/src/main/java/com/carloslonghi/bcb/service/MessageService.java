@@ -6,6 +6,7 @@ import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
+import com.carloslonghi.bcb.entity.enums.LedgerEntryType;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.repository.ClientRepository;
@@ -20,8 +21,10 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -34,8 +37,13 @@ public class MessageService {
 
     private final ClientService clientService;
     private final ConversationService conversationService;
+    private final LedgerService ledgerService;
 
     private final MessageQueue messageQueue;
+    private final Clock clock;
+
+    private static final Set<MessageStatus> PENDING_STATUSES =
+            Set.of(MessageStatus.QUEUED, MessageStatus.PROCESSING, MessageStatus.SENT);
 
     private static final BigDecimal NORMAL_COST = new BigDecimal("0.25");
     private static final BigDecimal URGENT_COST = new BigDecimal("0.50");
@@ -55,6 +63,7 @@ public class MessageService {
         clientService.debit(sender, cost);
 
         Message message = messageRepository.save(newMessage(sender, conversation, request, cost));
+        ledgerService.record(sender, message, LedgerEntryType.DEBIT, cost);
 
         conversation.setLastMessageContent(message.getContent());
         conversation.setLastMessageTime(message.getCreatedAt());
@@ -62,6 +71,28 @@ public class MessageService {
 
         enqueueAfterCommit(message);
         return message;
+    }
+
+    // Chamado quando as tentativas do worker acabam: marca FAILED e devolve o custo, tudo numa transacao.
+    // So estorna quem tirou a mensagem de pendente; se ela ja estava finalizada (ex.: DLQ reprocessada), nada muda
+    @Transactional
+    public void failAndRefund(Long messageId) {
+        Message message = messageRepository.findById(messageId).orElse(null);
+        if (message == null) {
+            log.warn("Mensagem {} nao existe; nada a estornar", messageId);
+            return;
+        }
+
+        // Mesmo lock do envio: estorno e envio simultaneos do mesmo cliente nao se atropelam no saldo
+        Client sender = clientRepository.findWithLockById(message.getSender().getId())
+                .orElseThrow(() -> new ReferencedEntityNotFoundException("Cliente", message.getSender().getId()));
+
+        if (messageRepository.updateStatusIfIn(messageId, PENDING_STATUSES, MessageStatus.FAILED) == 0) {
+            return;
+        }
+
+        clientService.refund(sender, message.getCost());
+        ledgerService.record(sender, message, LedgerEntryType.REFUND, message.getCost());
     }
 
     public List<Message> findAll() {
@@ -93,7 +124,7 @@ public class MessageService {
         message.setPriority(request.priority());
         message.setStatus(MessageStatus.QUEUED);
         message.setCost(cost);
-        message.setCreatedAt(Instant.now());
+        message.setCreatedAt(clock.instant());
         return message;
     }
 
@@ -102,12 +133,19 @@ public class MessageService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                // O debito ja foi gravado; se a fila estiver fora do ar a mensagem fica QUEUED
-                // no banco e o PendingMessagesRecovery a reenfileira na proxima inicializacao
+                // O debito ja foi gravado; se a fila estiver fora do ar a mensagem fica QUEUED com enqueued_at
+                // nulo, e a rotina periodica do PendingMessagesRecovery a publica de novo
                 try {
                     messageQueue.enqueue(message);
                 } catch (Exception e) {
                     log.error("Nao foi possivel enfileirar a mensagem {}", message.getId(), e);
+                    return;
+                }
+                // Se so a marcacao falhar, a rotina periodica publica de novo; o worker ignora a duplicata
+                try {
+                    messageRepository.markEnqueued(message.getId(), clock.instant());
+                } catch (Exception e) {
+                    log.warn("Mensagem {} publicada, mas sem enqueued_at; pode ser publicada de novo", message.getId(), e);
                 }
             }
         });

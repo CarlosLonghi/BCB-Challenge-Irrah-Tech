@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.integration;
 
+import com.carloslonghi.bcb.service.MessageService;
 import com.carloslonghi.bcb.config.RabbitConfig;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.jayway.jsonpath.JsonPath;
@@ -30,6 +31,9 @@ class DeadLetterIT extends IntegrationTest {
     @Autowired
     private AmqpAdmin amqpAdmin;
 
+    @Autowired
+    private MessageService messageService;
+
     @BeforeEach
     void purgeDeadLetterQueue() {
         amqpAdmin.purgeQueue(RabbitConfig.DEAD_LETTER_QUEUE, false);
@@ -45,9 +49,9 @@ class DeadLetterIT extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("falha em todas as tentativas de processar marca a mensagem como FAILED e manda para a DLQ")
-    void processingFailureMarksFailed() throws Exception {
-        createPrePaidClient("12345678909", "10.00");
+    @DisplayName("falha em todas as tentativas marca FAILED, estorna o custo e manda para a DLQ")
+    void processingFailureMarksFailedAndRefunds() throws Exception {
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         String token = login("12345678909");
         // A mensagem enviada a seguir tera id 1 (TRUNCATE ... RESTART IDENTITY)
         doThrow(new DataAccessResourceFailureException("falha no worker"))
@@ -62,5 +66,30 @@ class DeadLetterIT extends IntegrationTest {
         await().atMost(Duration.ofSeconds(15)).until(() -> "FAILED".equals(jdbcTemplate.queryForObject(
                 "SELECT status FROM tb_messages WHERE id = 1", String.class)));
         assertThat(rabbitTemplate.receiveAndConvert(RabbitConfig.DEAD_LETTER_QUEUE, 10_000)).isEqualTo("1");
+
+        assertThat(balanceOf(clientId)).isEqualByComparingTo("10.00");
+        assertThat(jdbcTemplate.queryForList("SELECT type FROM tb_ledger_entries WHERE message_id = 1 ORDER BY id", String.class))
+                .containsExactly("DEBIT", "REFUND");
+    }
+
+    @Test
+    @DisplayName("mensagem que passa de novo pelo recoverer não é estornada duas vezes")
+    void secondFailureDoesNotRefundAgain() throws Exception {
+        Long clientId = createPostPaidClient("12345678909", "5.00");
+        String token = login("12345678909");
+        doThrow(new DataAccessResourceFailureException("falha no worker"))
+                .when(messageRepository).updateStatus(eq(1L), eq(MessageStatus.PROCESSING));
+        mockMvc.perform(withToken(post("/messages"), token).contentType(MediaType.APPLICATION_JSON)
+                        .content(messageJson(null, 55, "Maria Souza", "URGENT")))
+                .andExpect(status().isCreated());
+        await().atMost(Duration.ofSeconds(15)).until(() -> "FAILED".equals(jdbcTemplate.queryForObject(
+                "SELECT status FROM tb_messages WHERE id = 1", String.class)));
+        assertThat(rabbitTemplate.receiveAndConvert(RabbitConfig.DEAD_LETTER_QUEUE, 10_000)).isEqualTo("1");
+
+        // O recoverer roda de novo para a mesma mensagem (ex.: duas entregas do mesmo id esgotando as tentativas)
+        messageService.failAndRefund(1L);
+
+        assertThat(limitOf(clientId)).isEqualByComparingTo("5.00");
+        assertThat(count("tb_ledger_entries")).isEqualTo(2);
     }
 }

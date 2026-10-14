@@ -158,6 +158,35 @@ class ClientServiceTest {
     }
 
     @Nested
+    @DisplayName("refund")
+    class Refund {
+
+        @Test
+        @DisplayName("pré-pago: devolve ao saldo e salva")
+        void prePaidRefundsBalance() {
+            Client client = prePaidClient(1L, "9.50");
+
+            clientService.refund(client, new BigDecimal("0.50"));
+
+            assertThat(client.getBalance()).isEqualByComparingTo("10.00");
+            assertThat(client.getLimit()).isEqualByComparingTo("0");
+            verify(clientRepository).save(client);
+        }
+
+        @Test
+        @DisplayName("pós-pago: devolve ao limite e salva")
+        void postPaidRefundsLimit() {
+            Client client = postPaidClient(1L, "4.75");
+
+            clientService.refund(client, new BigDecimal("0.25"));
+
+            assertThat(client.getLimit()).isEqualByComparingTo("5.00");
+            assertThat(client.getBalance()).isEqualByComparingTo("0");
+            verify(clientRepository).save(client);
+        }
+    }
+
+    @Nested
     @DisplayName("debit - plano pós-pago")
     class DebitPostPaid {
 

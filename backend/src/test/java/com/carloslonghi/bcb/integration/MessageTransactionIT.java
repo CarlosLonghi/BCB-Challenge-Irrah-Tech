@@ -45,6 +45,7 @@ class MessageTransactionIT extends IntegrationTest {
         assertThat(balanceOf(clientId)).isEqualByComparingTo("10.00");
         assertThat(count("tb_conversations")).isZero();
         assertThat(count("tb_messages")).isZero();
+        assertThat(count("tb_ledger_entries")).isZero();
         verify(messageQueue, never()).enqueue(any());
     }
 
@@ -60,6 +61,8 @@ class MessageTransactionIT extends IntegrationTest {
         assertThat(balanceOf(clientId)).isEqualByComparingTo("9.50");
         assertThat(count("tb_conversations")).isEqualTo(1);
         assertThat(count("tb_messages")).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT type || ' ' || amount FROM tb_ledger_entries", String.class))
+                .isEqualTo("DEBIT 0.50");
         verify(messageQueue).enqueue(message);
         // O worker real consome a mensagem; espera terminar para nao vazar para o proximo teste
         await().until(() -> "DELIVERED".equals(jdbcTemplate.queryForObject(

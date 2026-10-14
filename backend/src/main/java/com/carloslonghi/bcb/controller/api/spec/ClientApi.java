@@ -3,6 +3,7 @@ package com.carloslonghi.bcb.controller.api.spec;
 import com.carloslonghi.bcb.controller.request.ClientRequest;
 import com.carloslonghi.bcb.controller.request.ClientUpdateRequest;
 import com.carloslonghi.bcb.controller.response.ClientBalanceResponse;
+import com.carloslonghi.bcb.controller.response.LedgerEntryResponse;
 import com.carloslonghi.bcb.controller.response.ClientResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -205,6 +206,34 @@ public interface ClientApi {
             )
     })
     ResponseEntity<ClientBalanceResponse> getClientBalance(
+            @Parameter(description = "ID do cliente", required = true) @PathVariable Long id
+    );
+
+    @Operation(
+            summary = "Consultar Extrato",
+            description = "Débitos de envio e estornos de mensagens que falharam, dos mais recentes para os mais antigos"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Extrato retornado com sucesso",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = LedgerEntryResponse.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Token ausente ou inválido",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Extrato de outro cliente",
+                    content = @Content
+            )
+    })
+    ResponseEntity<List<LedgerEntryResponse>> getLedger(
             @Parameter(description = "ID do cliente", required = true) @PathVariable Long id
     );
 }

@@ -1,6 +1,6 @@
 package com.carloslonghi.bcb.config;
 
-import com.carloslonghi.bcb.infra.worker.MessageProcessor;
+import com.carloslonghi.bcb.service.MessageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.Queue;
@@ -35,14 +35,14 @@ public class RabbitConfig {
     }
 
     // Chamado quando as tentativas de spring.rabbitmq.listener.simple.retry acabam:
-    // marca a mensagem como FAILED e rejeita sem reenfileirar, o que a manda para a DLQ
+    // marca a mensagem como FAILED, estorna o custo e rejeita sem reenfileirar, o que a manda para a DLQ
     @Bean
-    public MessageRecoverer messageRecoverer(MessageProcessor messageProcessor) {
+    public MessageRecoverer messageRecoverer(MessageService messageService) {
         return (message, cause) -> {
             String body = new String(message.getBody(), StandardCharsets.UTF_8);
             log.error("Mensagem {} falhou em todas as tentativas; enviando para a DLQ", body, cause);
             try {
-                messageProcessor.markFailed(Long.valueOf(body));
+                messageService.failAndRefund(Long.valueOf(body));
             } catch (NumberFormatException e) {
                 log.error("Corpo invalido na fila, nao e um id de mensagem: {}", body);
             }

@@ -44,8 +44,4 @@ public class MessageProcessor {
 
         messageRepository.updateStatus(messageId, MessageStatus.DELIVERED);
     }
-
-    public void markFailed(Long messageId) {
-        messageRepository.updateStatus(messageId, MessageStatus.FAILED);
-    }
 }

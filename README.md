@@ -81,7 +81,7 @@ sh ./mvnw verify    # unitários + integração (*IT) + checagem de cobertura; p
   - lock pessimista do cliente (uma segunda transação espera a primeira) e envios simultâneos que não gastam o mesmo saldo duas vezes;
   - transação do envio (falha depois do débito desfaz o débito) e o `updateStatus` com `@Transactional` + `@Modifying`;
   - migrations do Flyway, constraints do banco, segurança (401/403), validação (400) e o fluxo completo envio -> RabbitMQ -> worker -> `DELIVERED`;
-  - dead-letter queue (`FAILED` depois das tentativas) e recuperação de mensagens pendentes na inicialização.
+  - dead-letter queue (`FAILED` e estorno depois das tentativas, sem estornar duas vezes), extrato, recuperação de mensagens pendentes na inicialização e republicação periódica de mensagens que nunca chegaram ao RabbitMQ.
 - **Cobertura:** o JaCoCo exige no mínimo 80% de linhas nos testes unitários (o `verify` falha abaixo disso); hoje está em 100%. O relatório fica em `backend/target/site/jacoco/index.html` depois do `test`/`verify`. Bootstrap, configuração de infraestrutura e DTOs ficam fora da medição.
 
 Para rodar uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` (unitário) ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT` (integração).
@@ -152,18 +152,19 @@ docker-compose.yaml
 - **Contrato da API:** documentado no Swagger (`http://localhost:8080/swagger-ui/index.html`). Difere do enunciado em enums em maiúsculas (`PRE_PAID`, `QUEUED`...) e ids numéricos.
 - **Envio de mensagem:** débito, mensagem e conversa são gravados numa transação só, com lock pessimista na linha do cliente (`SELECT ... FOR UPDATE`): envios simultâneos do mesmo cliente esperam um pelo outro e não furam o saldo. A mensagem só é publicada na fila depois do commit.
 - **Fila:** RabbitMQ com prioridade (`x-max-priority`: urgente 10, normal 1), publicando só o id da mensagem, com um consumidor e `prefetch = 1` (uma mensagem por vez, urgentes passam na frente das normais que estão esperando). Fica atrás da interface `MessageQueue`, então o `MessageService` não conhece AMQP. Começou como `PriorityBlockingQueue` em memória; depois da migração essa versão foi removida, porque o `docker-compose` sempre sobe o RabbitMQ.
-- **Falhas no processamento:** 3 tentativas; esgotadas, a mensagem vira `FAILED` e vai para a dead-letter queue `bcb.messages.dlq`. O processamento ignora mensagens já finalizadas, então receber a mesma mensagem duas vezes não a reprocessa.
-- **Recuperação:** ao iniciar, o backend devolve para a fila as mensagens que ficaram em `QUEUED`, `PROCESSING` ou `SENT` (backend derrubado no meio, ou publicação que falhou com o RabbitMQ fora do ar).
+- **Falhas no processamento:** 3 tentativas; esgotadas, a mensagem vira `FAILED`, o custo é estornado (ao saldo ou ao limite, uma vez só) e a mensagem vai para a dead-letter queue `bcb.messages.dlq`. O processamento ignora mensagens já finalizadas, então receber a mesma mensagem duas vezes não a reprocessa.
+- **Recuperação:** ao iniciar, o backend devolve para a fila as mensagens que ficaram em `QUEUED`, `PROCESSING` ou `SENT` (backend derrubado no meio). A cada 30s, uma rotina republica as mensagens cuja publicação falhou (RabbitMQ fora do ar no envio), identificadas por `enqueued_at` nulo, sem precisar reiniciar o backend.
+- **Extrato:** `GET /clients/{id}/ledger` lista os débitos de envio e os estornos (`tb_ledger_entries`), gravados na mesma transação que altera saldo/limite.
 - **Autenticação e erros:** a senha é guardada como hash BCrypt. O `POST /auth` emite um JWT com o id do cliente no `sub`, e o resource server do Spring Security valida a assinatura e a expiração em toda rota protegida, respondendo `401` antes do controller. Documento inexistente e senha errada dão a mesma mensagem, para não revelar quais documentos estão cadastrados. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 de token, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
-- **Status `FAILED` sem reenviar e sem estorno:** o débito acontece no envio e a falha não devolve o valor; um botão de reenvio cobraria de novo.
+- **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.
 - **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema só envia mensagens e não recebe respostas.
 - **Visual:** IBM Plex Sans/Mono (números sempre em mono), barra azul-marinho, fundo cinza-papel, um único verde para ações; tokens em `frontend/src/styles/global.css`.
 - **Schema:** versionado com Flyway (`backend/src/main/resources/db/migrations`); o Hibernate só valida (`ddl-auto=validate`).
 - **Sessões:** o JWT expira em 8 horas (`bcb.security.jwt.ttl`). Não há refresh token nem revogação no servidor; o logout apaga a sessão do navegador.
 - **Configuração:** sem perfil ativo, a aplicação sobe com `application-dev.properties` (SQL no log, DEBUG do Spring Security, segredo JWT de dev). O docker-compose usa o perfil `docker`. As origens do CORS vêm de `CORS_ALLOWED_ORIGINS`.
 - **Testes do backend:** unitários com Mockito para as regras e de integração com Testcontainers para o que depende de Spring, banco e fila reais (lock, transações, queries, segurança, worker). Os de integração rodam no `verify`, então o `test` continua rápido e sem Docker. A meta de cobertura mede só os unitários, para os de integração não esconderem lacunas neles.
-- **Não implementado:** tipo de mensagem SMS/WhatsApp, reset mensal do limite pós-pago, histórico de transações financeiras, conversão entre planos, administração de créditos (saldo e limite são definidos só no cadastro).
+- **Não implementado:** tipo de mensagem SMS/WhatsApp, reset mensal do limite pós-pago, conversão entre planos, administração de créditos (saldo e limite são definidos só no cadastro).
 
 ## Documentação
 
