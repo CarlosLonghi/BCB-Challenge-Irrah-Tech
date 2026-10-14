@@ -21,6 +21,7 @@ import com.carloslonghi.bcb.exception.CreditLimitExceededException;
 import com.carloslonghi.bcb.exception.InsufficientBalanceException;
 import com.carloslonghi.bcb.exception.MissingRecipientException;
 import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
+import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
 import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import com.carloslonghi.bcb.repository.ConversationRepository;
@@ -38,6 +39,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -83,6 +85,8 @@ class MessageServiceTest {
     private LedgerService ledgerService;
     @Spy
     private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    @Mock
+    private ApplicationEventPublisher events;
 
     @InjectMocks
     private MessageService messageService;
@@ -405,11 +409,13 @@ class MessageServiceTest {
 
             messageService.failAndRefund(5L);
 
-            InOrder inOrder = inOrder(clientRepository, messageRepository, clientService, ledgerService);
+            InOrder inOrder = inOrder(clientRepository, messageRepository, clientService, ledgerService, events);
             inOrder.verify(clientRepository).findWithLockById(SENDER_ID);
             inOrder.verify(messageRepository).updateStatusIfIn(5L, PENDING, MessageStatus.FAILED);
             inOrder.verify(clientService).refund(sender, new BigDecimal("0.50"));
             inOrder.verify(ledgerService).record(sender, message, LedgerEntryType.REFUND, new BigDecimal("0.50"));
+            inOrder.verify(events).publishEvent(
+                    new MessageStatusChanged(SENDER_ID, conversation.getId(), 5L, MessageStatus.FAILED));
         }
 
         @Test
@@ -422,7 +428,7 @@ class MessageServiceTest {
             messageService.failAndRefund(5L);
 
             verify(clientService, never()).refund(any(), any());
-            verifyNoInteractions(ledgerService);
+            verifyNoInteractions(ledgerService, events);
         }
 
         @Test

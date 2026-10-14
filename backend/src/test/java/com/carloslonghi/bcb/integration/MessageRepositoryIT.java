@@ -1,6 +1,7 @@
 package com.carloslonghi.bcb.integration;
 
 import org.springframework.data.domain.Limit;
+import com.carloslonghi.bcb.repository.MessageRef;
 import com.carloslonghi.bcb.repository.StatusCount;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
@@ -127,7 +128,9 @@ class MessageRepositoryIT extends IntegrationTest {
         messageRepository.markDelivered(old.getId(), now.minusSeconds(10));
         messageRepository.markDelivered(recent.getId(), now);
 
-        assertThat(messageRepository.markReadDeliveredBefore(now.minusSeconds(5))).isEqualTo(1);
+        assertThat(messageRepository.findDeliveredBefore(now.minusSeconds(5), Limit.of(10)))
+                .containsExactly(new MessageRef(old.getId(), old.getSender().getId(), conversation.getId()));
+        assertThat(messageRepository.markRead(List.of(old.getId(), failed.getId()))).isEqualTo(1);
 
         assertThat(messageRepository.findById(old.getId()).orElseThrow().getStatus()).isEqualTo(MessageStatus.READ);
         assertThat(messageRepository.findById(recent.getId()).orElseThrow().getStatus()).isEqualTo(MessageStatus.DELIVERED);

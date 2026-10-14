@@ -2,6 +2,7 @@ package com.carloslonghi.bcb.service;
 
 import com.carloslonghi.bcb.controller.request.MessageRequest;
 import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
+import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
 import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
@@ -15,6 +16,7 @@ import com.carloslonghi.bcb.repository.MessageRepository;
 import com.carloslonghi.bcb.utils.PageLimit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,7 @@ public class MessageService {
 
     private final MessageQueue messageQueue;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     private static final Set<MessageStatus> PENDING_STATUSES =
             Set.of(MessageStatus.QUEUED, MessageStatus.PROCESSING, MessageStatus.SENT);
@@ -94,6 +97,9 @@ public class MessageService {
 
         clientService.refund(sender, message.getCost());
         ledgerService.record(sender, message, LedgerEntryType.REFUND, message.getCost());
+        // Entregue ao SSE so depois do commit (o frontend recarrega o saldo ao receber o FAILED)
+        events.publishEvent(new MessageStatusChanged(
+                sender.getId(), message.getConversation().getId(), messageId, MessageStatus.FAILED));
     }
 
     // Mensagens do cliente, mais recente primeiro, paginadas por id
