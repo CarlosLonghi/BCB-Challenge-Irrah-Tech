@@ -1,25 +1,36 @@
 package com.carloslonghi.bcb.service;
 
+import com.carloslonghi.bcb.config.JwtProperties;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.exception.ClientNotActiveException;
-import com.carloslonghi.bcb.exception.DocumentNotRegisteredException;
+import com.carloslonghi.bcb.exception.InvalidCredentialsException;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Clock;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final ClientRepository clientRepository;
-    private final Map<String, Long> tokenStore = new ConcurrentHashMap<>();
+    private final PasswordEncoder passwordEncoder;
+    private final JwtEncoder jwtEncoder;
+    private final JwtProperties jwtProperties;
+    private final Clock clock;
 
-    public Client authenticate(String document) {
+    public Client authenticate(String document, String password) {
         Client client = clientRepository.findByDocument(document)
-                .orElseThrow(DocumentNotRegisteredException::new);
+                .filter(found -> found.getPasswordHash() != null)
+                .filter(found -> passwordEncoder.matches(password, found.getPasswordHash()))
+                .orElseThrow(InvalidCredentialsException::new);
 
         if (!client.isActive()) {
             throw new ClientNotActiveException();
@@ -28,13 +39,16 @@ public class AuthService {
         return client;
     }
 
+    // JWT assinado com o id do cliente no "sub"; vale ate "exp" e sobrevive a um restart do backend
     public String createToken(Long clientId) {
-        String token = UUID.randomUUID().toString();
-        tokenStore.put(token, clientId);
-        return token;
-    }
+        Instant now = clock.instant();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(clientId.toString())
+                .issuedAt(now)
+                .expiresAt(now.plus(jwtProperties.ttl()))
+                .build();
 
-    public Long getClientIdFromToken(String token) {
-        return tokenStore.get(token);
+        JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
+        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }

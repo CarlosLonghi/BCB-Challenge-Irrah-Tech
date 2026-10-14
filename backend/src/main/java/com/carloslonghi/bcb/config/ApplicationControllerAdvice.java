@@ -5,7 +5,7 @@ import com.carloslonghi.bcb.exception.ClientAccessDeniedException;
 import com.carloslonghi.bcb.exception.ClientNotActiveException;
 import com.carloslonghi.bcb.exception.CreditLimitExceededException;
 import com.carloslonghi.bcb.exception.DocumentAlreadyExistsException;
-import com.carloslonghi.bcb.exception.DocumentNotRegisteredException;
+import com.carloslonghi.bcb.exception.InvalidCredentialsException;
 import com.carloslonghi.bcb.exception.InsufficientBalanceException;
 import com.carloslonghi.bcb.exception.InvalidDocumentException;
 import com.carloslonghi.bcb.exception.MissingRecipientException;
@@ -22,14 +22,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
-// Erros que nao passam por um controller (ex.: 401 do TokenAuthenticationFilter) seguem pelo
+// Erros que nao passam por um controller (ex.: 401 de token ausente ou invalido) seguem pelo
 // /error padrao do Spring Boot, que tem o mesmo formato do ErrorResponse.
 @RestControllerAdvice
 public class ApplicationControllerAdvice {
 
-    @ExceptionHandler(DocumentNotRegisteredException.class)
+    @ExceptionHandler(InvalidCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public ErrorResponse handleDocumentNotRegisteredException(DocumentNotRegisteredException exception,
+    public ErrorResponse handleInvalidCredentialsException(InvalidCredentialsException exception,
                                                               HttpServletRequest request) {
         return ErrorResponse.of(HttpStatus.UNAUTHORIZED, exception.getMessage(), request);
     }

@@ -5,7 +5,7 @@ import com.carloslonghi.bcb.exception.ClientAccessDeniedException;
 import com.carloslonghi.bcb.exception.ClientNotActiveException;
 import com.carloslonghi.bcb.exception.CreditLimitExceededException;
 import com.carloslonghi.bcb.exception.DocumentAlreadyExistsException;
-import com.carloslonghi.bcb.exception.DocumentNotRegisteredException;
+import com.carloslonghi.bcb.exception.InvalidCredentialsException;
 import com.carloslonghi.bcb.exception.InsufficientBalanceException;
 import com.carloslonghi.bcb.exception.InvalidDocumentException;
 import com.carloslonghi.bcb.exception.MissingRecipientException;
@@ -50,8 +50,8 @@ class ApplicationControllerAdviceTest {
     @Test
     @DisplayName("erros de autenticação e acesso viram 401 e 403")
     void authErrors() {
-        assertError(advice.handleDocumentNotRegisteredException(new DocumentNotRegisteredException(), request),
-                HttpStatus.UNAUTHORIZED, "Documento não cadastrado. Verifique o CPF/CNPJ.");
+        assertError(advice.handleInvalidCredentialsException(new InvalidCredentialsException(), request),
+                HttpStatus.UNAUTHORIZED, "Documento ou senha inválidos.");
         assertError(advice.handleClientNotActiveException(new ClientNotActiveException(), request),
                 HttpStatus.FORBIDDEN, "Cliente inativo.");
         assertError(advice.handleClientAccessDeniedException(new ClientAccessDeniedException(), request),

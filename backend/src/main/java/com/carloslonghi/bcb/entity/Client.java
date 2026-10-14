@@ -45,6 +45,10 @@ public class Client {
     @Column(nullable = false)
     private boolean active;
 
+    // Hash BCrypt; nulo para clientes cadastrados antes da senha existir (esses nao conseguem entrar)
+    @Column(name = "password_hash", length = 100)
+    private String passwordHash;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

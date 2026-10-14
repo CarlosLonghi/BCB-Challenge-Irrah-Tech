@@ -13,6 +13,7 @@ import com.carloslonghi.bcb.repository.ClientRepository;
 import com.carloslonghi.bcb.utils.DocumentValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -23,13 +24,15 @@ import java.util.List;
 public class ClientService {
 
     private final ClientRepository clientRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public Client create(Client client) {
+    public Client create(Client client, String rawPassword) {
         validateDocumentType(client);
         if (clientRepository.existsByDocument(client.getDocument())) {
             throw new DocumentAlreadyExistsException(client.getDocument());
         }
 
+        client.setPasswordHash(passwordEncoder.encode(rawPassword));
         return clientRepository.save(client);
     }
 

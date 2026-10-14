@@ -6,12 +6,8 @@ import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.MockMvcBuilderCustomizer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -23,7 +19,6 @@ import org.testcontainers.rabbitmq.RabbitMQContainer;
 
 import java.math.BigDecimal;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,21 +30,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("it")
-@Import(IntegrationTest.MockMvcServletPath.class)
 public abstract class IntegrationTest {
 
-    // O TokenAuthenticationFilter decide as rotas publicas por getServletPath(). No Tomcat ele e o caminho
-    // da requisicao (DispatcherServlet mapeado em "/"), mas no MockMvc vem vazio; aqui fica igual ao Tomcat
-    @TestConfiguration
-    static class MockMvcServletPath {
-        @Bean
-        MockMvcBuilderCustomizer servletPathAsInTomcat() {
-            return builder -> builder.defaultRequest(get("/").with(request -> {
-                request.setServletPath(request.getRequestURI());
-                return request;
-            }));
-        }
-    }
+    protected static final String PASSWORD = "senha-forte-123";
 
     @ServiceConnection
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
@@ -90,9 +73,9 @@ public abstract class IntegrationTest {
 
     protected Long createClient(String document, String planType, String balance, String limit, boolean active) throws Exception {
         String body = """
-                {"name": "Cliente %s", "document": "%s", "documentType": "%s", "planType": "%s",
+                {"name": "Cliente %s", "document": "%s", "password": "%s", "documentType": "%s", "planType": "%s",
                  "balance": %s, "limit": %s, "active": %s}
-                """.formatted(document, document, document.length() == 11 ? "CPF" : "CNPJ", planType, balance, limit, active);
+                """.formatted(document, document, PASSWORD, document.length() == 11 ? "CPF" : "CNPJ", planType, balance, limit, active);
 
         String response = mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
@@ -102,10 +85,14 @@ public abstract class IntegrationTest {
 
     protected String login(String document) throws Exception {
         String response = mockMvc.perform(post("/auth").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"document\": \"%s\"}".formatted(document)))
+                        .content(authJson(document, PASSWORD)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return JsonPath.read(response, "$.token");
+    }
+
+    protected static String authJson(String document, String password) {
+        return "{\"document\": \"%s\", \"password\": \"%s\"}".formatted(document, password);
     }
 
     protected static MockHttpServletRequestBuilder withToken(MockHttpServletRequestBuilder request, String token) {

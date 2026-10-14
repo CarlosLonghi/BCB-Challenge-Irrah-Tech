@@ -4,7 +4,7 @@ import com.carloslonghi.bcb.controller.request.AuthRequest;
 import com.carloslonghi.bcb.controller.response.AuthResponse;
 import com.carloslonghi.bcb.controller.response.ClientResponse;
 import com.carloslonghi.bcb.entity.Client;
-import com.carloslonghi.bcb.exception.DocumentNotRegisteredException;
+import com.carloslonghi.bcb.exception.InvalidCredentialsException;
 import com.carloslonghi.bcb.mapper.ClientMapper;
 import com.carloslonghi.bcb.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
@@ -38,27 +38,27 @@ class AuthControllerTest {
     private AuthController controller;
 
     @Test
-    @DisplayName("autentica o documento e devolve o token com os dados do cliente")
+    @DisplayName("autentica documento e senha e devolve o token com os dados do cliente")
     void authenticate() {
         Client client = prePaidClient(1L, "10.00");
         ClientResponse clientResponse = mock(ClientResponse.class);
-        when(authService.authenticate("12345678909")).thenReturn(client);
+        when(authService.authenticate("12345678909", "senha-forte-123")).thenReturn(client);
         when(authService.createToken(1L)).thenReturn("token-123");
         when(clientMapper.toResponse(client)).thenReturn(clientResponse);
 
-        ResponseEntity<AuthResponse> response = controller.authenticate(new AuthRequest("12345678909"));
+        ResponseEntity<AuthResponse> response = controller.authenticate(new AuthRequest("12345678909", "senha-forte-123"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(new AuthResponse("token-123", clientResponse));
     }
 
     @Test
-    @DisplayName("documento não cadastrado: o erro propaga e nenhum token é criado")
+    @DisplayName("credenciais inválidas: o erro propaga e nenhum token é criado")
     void unknownDocument() {
-        when(authService.authenticate("00000000000")).thenThrow(new DocumentNotRegisteredException());
+        when(authService.authenticate("00000000000", "senha-forte-123")).thenThrow(new InvalidCredentialsException());
 
-        assertThatThrownBy(() -> controller.authenticate(new AuthRequest("00000000000")))
-                .isInstanceOf(DocumentNotRegisteredException.class);
+        assertThatThrownBy(() -> controller.authenticate(new AuthRequest("00000000000", "senha-forte-123")))
+                .isInstanceOf(InvalidCredentialsException.class);
         verify(authService, never()).createToken(any());
         verifyNoInteractions(clientMapper);
     }
