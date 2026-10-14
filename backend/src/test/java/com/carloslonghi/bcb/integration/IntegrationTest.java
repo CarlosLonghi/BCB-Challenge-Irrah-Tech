@@ -38,7 +38,7 @@ public abstract class IntegrationTest {
     static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
 
     @ServiceConnection
-    static final RabbitMQContainer RABBIT = new RabbitMQContainer("rabbitmq:3-management-alpine");
+    static final RabbitMQContainer RABBIT = new RabbitMQContainer("rabbitmq:4-management-alpine");
 
     static {
         POSTGRES.start();

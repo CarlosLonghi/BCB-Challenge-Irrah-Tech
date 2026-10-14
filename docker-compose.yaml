@@ -18,7 +18,7 @@ services:
       retries: 5
 
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:4-management-alpine
     container_name: bcb-rabbitmq
     restart: always
     ports:
