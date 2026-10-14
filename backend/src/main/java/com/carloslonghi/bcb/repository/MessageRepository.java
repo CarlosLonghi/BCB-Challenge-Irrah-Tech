@@ -45,12 +45,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("update Message m set m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED, m.deliveredAt = :at where m.id = :id")
     void markDelivered(Long id, Instant at);
 
-    // Leitura simulada: todas as DELIVERED entregues ate "cutoff" viram READ de uma vez
+    // Leitura simulada: as DELIVERED entregues ate "cutoff", com o dono de cada uma (para o evento SSE)
+    @Query("select new com.carloslonghi.bcb.repository.MessageRef(m.id, m.sender.id, m.conversation.id) from Message m "
+            + "where m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED and m.deliveredAt <= :cutoff "
+            + "order by m.id")
+    List<MessageRef> findDeliveredBefore(Instant cutoff, Limit limit);
+
     @Transactional
     @Modifying
     @Query("update Message m set m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.READ "
-            + "where m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED and m.deliveredAt <= :cutoff")
-    int markReadDeliveredBefore(Instant cutoff);
+            + "where m.id in :ids and m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED")
+    int markRead(Collection<Long> ids);
 
     // Volta para QUEUED como "nao publicada": se a publicacao seguinte falhar, a rotina periodica a encontra
     @Transactional

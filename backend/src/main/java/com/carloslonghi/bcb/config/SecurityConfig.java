@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.config;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +39,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // Fim de resposta assincrona (SSE do /events): a requisicao original ja foi autorizada,
+                        // e o dispatch ASYNC nao traz o token de novo (sessao stateless)
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // Erros fora dos controllers (ex.: 401 de token invalido) vao para /error;
                         // os dos controllers sao tratados no ApplicationControllerAdvice
                         .requestMatchers("/error").permitAll()

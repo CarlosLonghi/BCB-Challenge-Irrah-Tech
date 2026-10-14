@@ -6,9 +6,11 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.tags.Tag;
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -23,6 +25,18 @@ public class SwaggerConfig {
     // Enums viram schemas proprios (ClientPlanType, MessageStatus...) sem precisar de enumAsRef em cada campo
     static {
         ModelResolver.enumsAsRef = true;
+    }
+
+    // Respostas: o Jackson escreve todos os campos, inclusive os nulos, entao no contrato todos sao obrigatorios
+    // e os que podem vir nulos declaram "null" no tipo. Sem isso, os tipos gerados no frontend
+    // (frontend/openapi.json -> npm run api:types) viriam com todos os campos opcionais
+    @Bean
+    public OpenApiCustomizer responseFieldsRequired() {
+        return openApi -> openApi.getComponents().getSchemas().forEach((name, schema) -> {
+            if (name.endsWith("Response") && schema.getProperties() != null) {
+                schema.setRequired(new ArrayList<>(schema.getProperties().keySet()));
+            }
+        });
     }
 
     @Bean
@@ -53,7 +67,8 @@ public class SwaggerConfig {
                         new Tag().name("Clientes").description("Operações de CRUD e consulta de saldo"),
                         new Tag().name("Mensagens").description("Operações de envio e consulta de mensagens"),
                         new Tag().name("Conversas").description("Operações de consulta de conversas e mensagens"),
-                        new Tag().name("Fila").description("Estatísticas e status da fila de mensagens")
+                        new Tag().name("Fila").description("Estatísticas e status da fila de mensagens"),
+                        new Tag().name("Eventos").description("Status das mensagens em tempo real (SSE)")
                 ));
     }
 }

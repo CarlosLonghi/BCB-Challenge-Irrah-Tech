@@ -19,7 +19,7 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Prioridade | `MessagePriority` (`NORMAL`, `URGENT`) | Normal custa R$ 0,25; urgente, R$ 0,50 e é processada antes. Na fila vira prioridade AMQP 1 ou 10. |
 | Custo | `Message.cost`, `MessageService.NORMAL_COST` / `URGENT_COST` | Valor cobrado no envio, gravado na mensagem. |
 | Status | `MessageStatus` | Ciclo: `QUEUED` → `PROCESSING` → `SENT` → `DELIVERED` → `READ`; `FAILED` depois de esgotar as tentativas. `READ` é simulado pelo `ReadSimulator` cerca de 4s depois da entrega (`delivered_at`), até existir recebimento real. Para o worker, `DELIVERED`, `READ` e `FAILED` são finais. |
-| Pendente | `QUEUED`, `PROCESSING`, `SENT` | Mensagem que ainda não chegou a um status final; o backend reenfileira essas no start. O frontend faz polling também em `DELIVERED`, esperando o `READ`. |
+| Pendente | `QUEUED`, `PROCESSING`, `SENT` | Mensagem que ainda não chegou a um status final; o backend reenfileira essas no start. No polling de reserva do frontend (stream fora do ar), `DELIVERED` também conta, esperando o `READ`. |
 | Não lidas | `Conversation.unreadCount` | Sempre `0` por enquanto: o sistema só envia. Fica no modelo para quando houver troca real de mensagens. |
 | Cursor / página | `before`, `limit`, `page`, `size`; `utils/PageLimit`, `shared/api/pagination.ts` | Paginação das listas: `before` = id exclusivo (mensagens, extrato), `page`/`size` nas conversas. 50 itens por padrão, teto 100. |
 
@@ -38,8 +38,11 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Worker | `RabbitMessageListener` + `MessageProcessor` | Consumidor que simula o envio e avança o status (cerca de 8 s até `DELIVERED`). |
 | Recuperação | `PendingMessagesRecovery` | Reenfileira as mensagens pendentes quando o backend sobe e, a cada 30s, republica as que nunca foram publicadas. |
 | Status da fila | `GET /queue/status`, `QueueStatusService` | Contagem por status/prioridade feita no banco. |
+| Evento / stream | `GET /events`, `MessageStatusChanged`, `MessageEventStream`; `shared/api/events.ts`, `useEventStream` | Conexão SSE do cliente logado: cada mudança de status de mensagem chega como evento `message-status`. Lida com `fetch` para mandar o Bearer. |
+| Contrato / tipos gerados | `frontend/openapi.json`, `OpenApiContractIT`, `shared/api/schema.d.ts` | OpenAPI versionado, conferido contra o backend; os tipos do frontend são gerados dele (`npm run api:types`). |
 | Migration | `db/migrations/V<n>__*.sql` | Única forma de mudar o schema (Flyway; Hibernate em `validate`). |
 | IT | `*IT.java` | Teste de integração (Testcontainers), roda no `mvnw verify`. |
+| E2E | `frontend/e2e/*.spec.ts` | Teste de ponta a ponta com Playwright contra o docker-compose. |
 
 ## Do enunciado, mas não implementado
 

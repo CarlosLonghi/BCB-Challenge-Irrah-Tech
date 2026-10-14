@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router';
 import type { Conversation } from '@/shared/api/types';
 import { Avatar } from '@/shared/components/Avatar';
 import { formatShortTime } from '@/shared/utils/format';

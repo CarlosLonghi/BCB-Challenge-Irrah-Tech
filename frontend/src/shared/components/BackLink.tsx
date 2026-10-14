@@ -1,5 +1,5 @@
 import { CaretLeftIcon } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import styles from './BackLink.module.css';
 
 /** "Voltar" para a lista; só aparece em telas pequenas, onde lista e chat não cabem juntos. */

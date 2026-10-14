@@ -29,6 +29,11 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   unauthorizedHandler = handler;
 }
 
+/** 401 em rota autenticada = token inválido ou vencido: encerra a sessão. Também usado pelo stream de eventos. */
+export function notifyUnauthorized() {
+  unauthorizedHandler?.();
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT';
   body?: unknown;
@@ -56,8 +61,7 @@ export async function request<T>(path: string, { method = 'GET', body, auth = tr
   }
 
   if (!response.ok) {
-    // Em rota autenticada, 401 = token inválido ou vencido: encerra a sessão.
-    if (response.status === 401 && auth) unauthorizedHandler?.();
+    if (response.status === 401 && auth) notifyUnauthorized();
     throw new ApiError(response.status, await errorMessage(response));
   }
 

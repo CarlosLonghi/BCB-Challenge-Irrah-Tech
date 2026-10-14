@@ -1,0 +1,1906 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Desafio Irrah - BCB API",
+    "description" : "        Passos para começar a usar\n\n        1. Criar um cliente na rota: \"POST `/clients`\"\n\n        2. Autenticar o cliente na rota: \"POST `/auth`\" com CPF/CNPJ e senha\n           - Copie o token retornado (JWT, válido por 8 horas)\n\n        3. Autorizar no Swagger\n           - Clique em \"Authorize\" (canto inferior direito)\n           - Insira o token copiado no input e clique em \"Authorize\"\n\n        4. Chamar os demais endpoints\n           - Agora as operações estarão liberadas.\n"
+  },
+  "tags" : [ {
+    "name" : "Autenticação",
+    "description" : "Login com CPF/CNPJ e senha"
+  }, {
+    "name" : "Clientes",
+    "description" : "Operações de CRUD e consulta de saldo"
+  }, {
+    "name" : "Mensagens",
+    "description" : "Operações de envio e consulta de mensagens"
+  }, {
+    "name" : "Conversas",
+    "description" : "Operações de consulta de conversas e mensagens"
+  }, {
+    "name" : "Fila",
+    "description" : "Estatísticas e status da fila de mensagens"
+  }, {
+    "name" : "Eventos",
+    "description" : "Status das mensagens em tempo real (SSE)"
+  } ],
+  "paths" : {
+    "/clients/{id}" : {
+      "get" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Obter Cliente por ID",
+        "description" : "Busca um cliente existente pelo ID",
+        "operationId" : "findById",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID do cliente",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente não encontrado",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Cliente encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Atualizar Cliente por ID",
+        "description" : "Atualiza o nome do próprio cliente. Saldo, limite, plano e documento não são alterados por esta rota",
+        "operationId" : "updateById",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID do cliente",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Novo nome do cliente",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClientUpdateRequest"
+              },
+              "examples" : {
+                "Alterar nome" : {
+                  "description" : "Alterar nome",
+                  "value" : {
+                    "name" : "Empresa Exemplo Ltda"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ID de outro cliente",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Cliente atualizado com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/messages" : {
+      "get" : {
+        "tags" : [ "Mensagens" ],
+        "summary" : "Listar Mensagens",
+        "description" : "Mensagens do cliente autenticado, da mais recente para a mais antiga, paginadas por cursor",
+        "operationId" : "findAll",
+        "parameters" : [ {
+          "name" : "before",
+          "in" : "query",
+          "description" : "Cursor: só itens com id menor que este; omitir para começar dos mais recentes",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "description" : "Itens por página: padrão 50, ajustado para 1..100",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Mensagem enviada com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MessageResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Mensagens" ],
+        "summary" : "Enviar Mensagem",
+        "description" : "Envia nova mensagem em conversa existente ou cria conversa nova",
+        "operationId" : "send",
+        "requestBody" : {
+          "description" : "Dados da mensagem",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MessageRequest"
+              },
+              "examples" : {
+                "Mensagem + nova conversa" : {
+                  "summary" : "Sem conversationId -> cria conversa nova",
+                  "description" : "Mensagem + nova conversa",
+                  "value" : {
+                    "recipientId" : 1,
+                    "recipientName" : "Carlos Longhi",
+                    "content" : "Mensagem exemplo 1",
+                    "priority" : "NORMAL"
+                  }
+                },
+                "Mensagem em conversa existente" : {
+                  "summary" : "Com conversationId -> usa conversa já existente",
+                  "description" : "Mensagem em conversa existente",
+                  "value" : {
+                    "conversationId" : 1,
+                    "recipientId" : 1,
+                    "content" : "Mensagem exemplo 2",
+                    "priority" : "NORMAL"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Dados inválidos",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "201" : {
+            "description" : "Mensagem enviada com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SendMessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/clients" : {
+      "get" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Listar Clientes",
+        "description" : "Lista todos os clientes (somente admin)",
+        "operationId" : "findAll_1",
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Clientes listados com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClientResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Criar Cliente",
+        "description" : "Cadastro de novo cliente (PF ou PJ) - (Rota Pública)",
+        "operationId" : "create",
+        "requestBody" : {
+          "description" : "Dados do cliente",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClientRequest"
+              },
+              "examples" : {
+                "Cliente pré-pago" : {
+                  "description" : "Cliente pré-pago",
+                  "value" : {
+                    "name" : "Empresa Exemplo 1",
+                    "document" : "11222333000181",
+                    "documentType" : "CNPJ",
+                    "planType" : "PRE_PAID",
+                    "balance" : 100.0,
+                    "limit" : 0.0,
+                    "active" : true
+                  }
+                },
+                "Cliente pós-pago" : {
+                  "description" : "Cliente pós-pago",
+                  "value" : {
+                    "name" : "Empresa Exemplo 2",
+                    "document" : "11222333000181",
+                    "documentType" : "CNPJ",
+                    "planType" : "POST_PAID",
+                    "balance" : 0.0,
+                    "limit" : 50.0,
+                    "active" : true
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "401" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Dados inválidos",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "201" : {
+            "description" : "Cliente criado com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/auth" : {
+      "post" : {
+        "tags" : [ "Autenticação" ],
+        "summary" : "Autenticar Cliente",
+        "description" : "Confere documento e senha e gera um JWT para acesso às demais rotas",
+        "operationId" : "authenticate",
+        "requestBody" : {
+          "description" : "Documento (CPF ou CNPJ) e senha",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AuthRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "401" : {
+            "description" : "Documento ou senha inválidos",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente inativo",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Token gerado com sucesso, junto com os dados do cliente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/status" : {
+      "get" : {
+        "tags" : [ "Fila" ],
+        "summary" : "Status da Fila",
+        "description" : "Exibe tamanho e contagens por status e prioridade",
+        "operationId" : "getStatus",
+        "responses" : {
+          "401" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Status da fila retornado com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueueStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/messages/{id}" : {
+      "get" : {
+        "tags" : [ "Mensagens" ],
+        "summary" : "Buscar Mensagem por ID",
+        "description" : "Obtém detalhes de uma mensagem",
+        "operationId" : "findById_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID da mensagem",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Mensagem não encontrada",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Mensagem encontrada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/messages/{id}/status" : {
+      "get" : {
+        "tags" : [ "Mensagens" ],
+        "summary" : "Status da Mensagem",
+        "description" : "Verifica status de uma mensagem",
+        "operationId" : "getStatus_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID da mensagem",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Mensagem não encontrada",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Status retornado com sucesso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageStatus"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/events" : {
+      "get" : {
+        "tags" : [ "Eventos" ],
+        "summary" : "Eventos em Tempo Real",
+        "description" : "Stream SSE (text/event-stream) com as mudanças de status das mensagens do cliente logado.\nEventos: \"ready\" (conexão aberta, sem dado) e \"message-status\" (dado em JSON).\nA conexão fecha depois de 30 minutos; o cliente deve reconectar e recarregar o que estiver na tela.\n",
+        "operationId" : "subscribe",
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Stream aberto; cada \"message-status\" traz este JSON",
+            "content" : {
+              "text/event-stream" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageStatusEventResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/conversations" : {
+      "get" : {
+        "tags" : [ "Conversas" ],
+        "summary" : "Listar Conversas",
+        "description" : "Conversas do cliente autenticado, da última mensagem mais recente para a mais antiga, paginadas por page/size",
+        "operationId" : "findAll_2",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "description" : "Página, começando em 0",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "description" : "Conversas por página: padrão 50, ajustado para 1..100",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Conversas listadas com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConversationResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/conversations/{id}" : {
+      "get" : {
+        "tags" : [ "Conversas" ],
+        "summary" : "Obter Conversa por ID",
+        "description" : "Detalhes de uma conversa específica",
+        "operationId" : "findById_2",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID da conversa",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Conversa não encontrada",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Conversa encontrada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConversationResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/conversations/{id}/messages" : {
+      "get" : {
+        "tags" : [ "Conversas" ],
+        "summary" : "Listar Mensagens da Conversa",
+        "description" : "As mensagens mais recentes da conversa (ou as anteriores ao cursor), em ordem crescente de envio",
+        "operationId" : "findMessagesByConversationId",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID da conversa",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "before",
+          "in" : "query",
+          "description" : "Cursor: só itens com id menor que este; omitir para começar dos mais recentes",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "description" : "Itens por página: padrão 50, ajustado para 1..100",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Conversa não encontrada",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Mensagens listadas com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MessageResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/clients/{id}/ledger" : {
+      "get" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Consultar Extrato",
+        "description" : "Débitos de envio e estornos de mensagens que falharam, dos mais recentes para os mais antigos",
+        "operationId" : "getLedger",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID do cliente",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "before",
+          "in" : "query",
+          "description" : "Cursor: só itens com id menor que este; omitir para começar dos mais recentes",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "description" : "Itens por página: padrão 50, ajustado para 1..100",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Extrato de outro cliente",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Extrato retornado com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LedgerEntryResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    },
+    "/clients/{id}/balance" : {
+      "get" : {
+        "tags" : [ "Clientes" ],
+        "summary" : "Consultar Saldo/Limite",
+        "description" : "Retorna saldo (pré-pago) ou limite (pós-pago)",
+        "operationId" : "getClientBalance",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "ID do cliente",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "401" : {
+            "description" : "Token ausente ou inválido",
+            "content" : { }
+          },
+          "404" : {
+            "description" : "Not Found",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente não encontrado",
+            "content" : { }
+          },
+          "409" : {
+            "description" : "Conflict",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Saldo/limite retornado com sucesso",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClientBalanceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Corpo de erro devolvido pela API",
+        "properties" : {
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : [ "string", "null" ],
+            "description" : "Texto para mostrar ao usuário",
+            "example" : "Saldo insuficiente."
+          },
+          "path" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "error", "message", "path", "status", "timestamp" ]
+      },
+      "ClientUpdateRequest" : {
+        "type" : "object",
+        "description" : "Dados que o cliente pode alterar. Saldo, limite, plano e documento são definidos no cadastro e não entram aqui (campos extras no JSON são ignorados)",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "ClientDocumentType" : {
+        "type" : "string",
+        "enum" : [ "CPF", "CNPJ" ]
+      },
+      "ClientPlanType" : {
+        "type" : "string",
+        "enum" : [ "PRE_PAID", "POST_PAID" ]
+      },
+      "ClientResponse" : {
+        "type" : "object",
+        "description" : "Detalhes de um cliente retornado pela API",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "document" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "$ref" : "#/components/schemas/ClientDocumentType"
+          },
+          "planType" : {
+            "$ref" : "#/components/schemas/ClientPlanType"
+          },
+          "balance" : {
+            "type" : "number",
+            "description" : "Saldo atual em R$ (pré-pago)",
+            "example" : 8.75
+          },
+          "limit" : {
+            "type" : "number",
+            "description" : "Limite restante em R$ (pós-pago)",
+            "example" : 0.0
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active", "balance", "document", "documentType", "id", "limit", "name", "planType" ]
+      },
+      "MessagePriority" : {
+        "type" : "string",
+        "enum" : [ "NORMAL", "URGENT" ]
+      },
+      "MessageRequest" : {
+        "type" : "object",
+        "description" : "Mensagem a enviar. Conversa existente: informe conversationId. Nova conversa: omita conversationId e informe recipientId e recipientName",
+        "properties" : {
+          "conversationId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "ID da conversa existente; omitir para iniciar uma nova",
+            "example" : 7
+          },
+          "recipientId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "ID do destinatário; obrigatório só ao iniciar conversa",
+            "example" : 55
+          },
+          "recipientName" : {
+            "type" : "string",
+            "description" : "Nome do destinatário; obrigatório só ao iniciar conversa",
+            "example" : "Maria Souza",
+            "maxLength" : 255,
+            "minLength" : 0
+          },
+          "content" : {
+            "type" : "string",
+            "maxLength" : 255,
+            "minLength" : 0
+          },
+          "priority" : {
+            "$ref" : "#/components/schemas/MessagePriority",
+            "description" : "Prioridade: NORMAL custa R$ 0,25 e URGENT R$ 0,50 (processada antes)"
+          }
+        },
+        "required" : [ "content", "priority" ]
+      },
+      "MessageStatus" : {
+        "type" : "string",
+        "enum" : [ "QUEUED", "PROCESSING", "SENT", "DELIVERED", "READ", "FAILED" ]
+      },
+      "SendMessageResponse" : {
+        "type" : "object",
+        "description" : "Resultado do envio de uma mensagem",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "conversationId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "ID da conversa usada ou criada; ao iniciar conversa, usar para abrir o chat",
+            "example" : 7
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/MessageStatus",
+            "description" : "Sempre QUEUED: a mensagem entra na fila depois que o débito é gravado"
+          },
+          "estimatedDelivery" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Previsão de entrega em UTC (criação + 30 s)",
+            "example" : "2026-09-30T13:45:30Z"
+          },
+          "cost" : {
+            "type" : "number"
+          },
+          "currentBalance" : {
+            "type" : "number",
+            "description" : "Pré-pago: saldo após o débito; pós-pago: limite restante",
+            "example" : 8.75
+          }
+        },
+        "required" : [ "conversationId", "cost", "currentBalance", "estimatedDelivery", "id", "status" ]
+      },
+      "ClientRequest" : {
+        "type" : "object",
+        "description" : "Dados para cadastrar um cliente",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 150,
+            "minLength" : 0
+          },
+          "document" : {
+            "type" : "string",
+            "description" : "CPF (11 dígitos) ou CNPJ (14 dígitos), só números; deve combinar com documentType",
+            "example" : 12345678909,
+            "minLength" : 1,
+            "pattern" : "\\d{11}|\\d{14}"
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "Senha de acesso, de 8 a 72 caracteres",
+            "example" : "minha-senha-123",
+            "maxLength" : 72,
+            "minLength" : 8
+          },
+          "documentType" : {
+            "$ref" : "#/components/schemas/ClientDocumentType"
+          },
+          "planType" : {
+            "$ref" : "#/components/schemas/ClientPlanType"
+          },
+          "balance" : {
+            "type" : "number",
+            "description" : "Saldo inicial em R$ (usado no pré-pago)",
+            "example" : 10.0
+          },
+          "limit" : {
+            "type" : "number",
+            "description" : "Limite de consumo em R$ (usado no pós-pago)",
+            "example" : 0.0
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "balance", "document", "documentType", "limit", "name", "password", "planType" ]
+      },
+      "AuthRequest" : {
+        "type" : "object",
+        "description" : "Credenciais do cliente: documento e senha",
+        "properties" : {
+          "document" : {
+            "type" : "string",
+            "description" : "CPF ou CNPJ do cliente, só dígitos",
+            "example" : 12345678909,
+            "minLength" : 1
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "Senha cadastrada",
+            "example" : "minha-senha-123",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "document", "password" ]
+      },
+      "AuthResponse" : {
+        "type" : "object",
+        "description" : "Token de acesso e dados do cliente autenticado",
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "JWT para o header Authorization: Bearer <token>. Vale por 8 horas (bcb.security.jwt.ttl)",
+            "example" : "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.assinatura"
+          },
+          "client" : {
+            "$ref" : "#/components/schemas/ClientResponse"
+          }
+        },
+        "required" : [ "client", "token" ]
+      },
+      "QueueStatusResponse" : {
+        "type" : "object",
+        "description" : "Contagem de mensagens por status, lida do banco",
+        "properties" : {
+          "queuedTotal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "queuedUrgent" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "queuedNormal" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "processing" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "sent" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "delivered" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "read" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Mensagens lidas (leitura simulada alguns segundos depois da entrega)"
+          },
+          "failed" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        },
+        "required" : [ "delivered", "failed", "processing", "queuedNormal", "queuedTotal", "queuedUrgent", "read", "sent" ]
+      },
+      "MessageResponse" : {
+        "type" : "object",
+        "description" : "Detalhes de uma mensagem enviada pelo cliente",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "conversationId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "senderId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "recipientId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Data/hora de criação, em UTC",
+            "example" : "2026-09-30T13:45:00.123Z"
+          },
+          "priority" : {
+            "$ref" : "#/components/schemas/MessagePriority"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/MessageStatus",
+            "description" : "Status no ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED -> READ (ou FAILED). A leitura é simulada alguns segundos depois da entrega"
+          },
+          "cost" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "content", "conversationId", "cost", "createdAt", "id", "priority", "recipientId", "senderId", "status" ]
+      },
+      "MessageStatusEventResponse" : {
+        "type" : "object",
+        "description" : "Dado do evento SSE \"message-status\": a mensagem mudou de status",
+        "properties" : {
+          "messageId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "conversationId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/MessageStatus"
+          }
+        },
+        "required" : [ "conversationId", "messageId", "status" ]
+      },
+      "ConversationResponse" : {
+        "type" : "object",
+        "description" : "Conversa do cliente com um destinatário",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "clientId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "recipientId" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "recipientName" : {
+            "type" : "string"
+          },
+          "lastMessageContent" : {
+            "type" : [ "string", "null" ],
+            "description" : "Texto da última mensagem; nulo antes do primeiro envio"
+          },
+          "lastMessageTime" : {
+            "type" : [ "string", "null" ],
+            "format" : "date-time",
+            "description" : "Data/hora da última mensagem, em UTC",
+            "example" : "2026-09-30T13:45:00.123Z"
+          },
+          "unreadCount" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Mensagens recebidas ainda não lidas. Sempre 0 por enquanto: o sistema só envia mensagens; passa a valer quando houver recebimento",
+            "example" : 0
+          }
+        },
+        "required" : [ "clientId", "id", "lastMessageContent", "lastMessageTime", "recipientId", "recipientName", "unreadCount" ]
+      },
+      "LedgerEntryResponse" : {
+        "type" : "object",
+        "description" : "Lançamento do extrato: débito de um envio ou estorno de uma mensagem que falhou",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "messageId" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Mensagem que gerou o lançamento",
+            "example" : 42
+          },
+          "type" : {
+            "$ref" : "#/components/schemas/LedgerEntryType",
+            "description" : "DEBIT (saiu do saldo/limite) ou REFUND (voltou)"
+          },
+          "amount" : {
+            "type" : "number",
+            "description" : "Valor em R$, sempre positivo",
+            "example" : 0.25
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "amount", "createdAt", "id", "messageId", "type" ]
+      },
+      "LedgerEntryType" : {
+        "type" : "string",
+        "enum" : [ "DEBIT", "REFUND" ]
+      },
+      "ClientBalanceResponse" : {
+        "type" : "object",
+        "description" : "Saldo e limite do cliente: pré-pago usa balance, pós-pago usa limit",
+        "properties" : {
+          "balance" : {
+            "type" : "number"
+          },
+          "limit" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "balance", "limit" ]
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

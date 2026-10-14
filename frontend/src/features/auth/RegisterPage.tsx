@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router';
 import type { DocumentType, NewClient, PlanType } from '@/shared/api/types';
 import { ErrorMessage } from '@/shared/components/ErrorMessage';
 import { useAction } from '@/shared/hooks/useAction';

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router';
 import { useAction } from '@/shared/hooks/useAction';
 import { ErrorMessage } from '@/shared/components/ErrorMessage';
 import { formatDocument, onlyDigits } from '@/shared/utils/format';

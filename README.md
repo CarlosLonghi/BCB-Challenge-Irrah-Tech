@@ -51,6 +51,7 @@ npm install
 npm run dev     # http://localhost:5173
 npm test        # Vitest
 npm run lint
+npm run api:types  # regenera src/shared/api/schema.d.ts a partir de openapi.json
 ```
 
 A URL da API vem de `VITE_API_URL` (padrão `http://localhost:8080`; ver `frontend/.env.example`).
@@ -81,7 +82,9 @@ sh ./mvnw verify    # unitários + integração (*IT) + checagem de cobertura; p
   - lock pessimista do cliente (uma segunda transação espera a primeira) e envios simultâneos que não gastam o mesmo saldo duas vezes;
   - transação do envio (falha depois do débito desfaz o débito) e o `updateStatus` com `@Transactional` + `@Modifying`;
   - migrations do Flyway, constraints do banco, segurança (401/403), validação (400) e o fluxo completo envio -> RabbitMQ -> worker -> `DELIVERED`;
-  - dead-letter queue (`FAILED` e estorno depois das tentativas, sem estornar duas vezes), extrato, recuperação de mensagens pendentes na inicialização e republicação periódica de mensagens que nunca chegaram ao RabbitMQ.
+  - dead-letter queue (`FAILED` e estorno depois das tentativas, sem estornar duas vezes), extrato, recuperação de mensagens pendentes na inicialização e republicação periódica de mensagens que nunca chegaram ao RabbitMQ;
+  - stream SSE (`GET /events`): cada etapa chega só ao dono da mensagem, e o `FAILED` só depois do commit do estorno;
+  - contrato: `frontend/openapi.json` igual ao `/v3/api-docs` (`OpenApiContractIT`; com `-Dopenapi.write=true` ele regrava o arquivo).
 - **Cobertura:** o JaCoCo exige no mínimo 80% de linhas nos testes unitários (o `verify` falha abaixo disso); hoje está em 100%. O relatório fica em `backend/target/site/jacoco/index.html` depois do `test`/`verify`. Bootstrap, configuração de infraestrutura e DTOs ficam fora da medição.
 
 Para rodar uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` (unitário) ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT` (integração).
@@ -90,17 +93,29 @@ Para rodar uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` (unitário)
 
 ```bash
 cd frontend
-npm test            # Vitest + Testing Library
+npm test            # Vitest + Testing Library (regras, hooks e as telas de login e chat)
 ```
+
+E2E com Playwright, contra a aplicação inteira no Docker:
+
+```bash
+docker compose up -d --build --wait
+cd frontend
+npx playwright install chromium   # só na primeira vez
+npm run e2e
+```
+
+O teste cadastra um cliente, abre uma conversa e espera a mensagem chegar a "Lida" pelo stream de eventos, sem recarregar a página.
 
 ### CI e fluxo de contribuição
 
-O GitHub Actions (`.github/workflows/ci.yml`) roda em todo PR para a `main` e em cada push nela, com dois jobs:
+O GitHub Actions (`.github/workflows/ci.yml`) roda em todo PR para a `main` e em cada push nela, com três jobs:
 
 - **backend:** `mvnw verify` (unitários, integração com Testcontainers e cobertura mínima do JaCoCo); os relatórios ficam como artefato da execução.
-- **frontend:** `npm ci`, `lint`, `test` e `build`.
+- **frontend:** `npm ci`, tipos da API conferidos (`npm run api:types` sem diferença), `lint`, `test` e `build`.
+- **e2e:** `docker compose up --build --wait` e o Playwright; em caso de falha, guarda os logs dos containers e o relatório.
 
-A `main` é protegida: não aceita push direto nem force-push. Toda alteração vai numa branch própria e entra por PR, que só pode ser mergeado com os dois jobs verdes e a branch atualizada com a `main`.
+A `main` é protegida: não aceita push direto nem force-push. Toda alteração vai numa branch própria e entra por PR, que só pode ser mergeado com os jobs verdes e a branch atualizada com a `main`.
 
 ```bash
 git checkout -b feat/minha-alteracao
@@ -121,7 +136,7 @@ docker-compose.yaml
 
 - **Backend:** Java 21, Spring Boot 4.1 (Web, Security, Data JPA, Validation, AMQP, Actuator), PostgreSQL, Flyway, RabbitMQ, MapStruct, Lombok, springdoc-openapi 3 (Swagger)
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
-- **Frontend:** React 18 + TypeScript + Vite, React Router, CSS Modules, Vitest + Testing Library, ícones Phosphor; servido por nginx no Docker
+- **Frontend:** React 19 + TypeScript + Vite, React Router 7, CSS Modules, tipos gerados do OpenAPI (openapi-typescript), Vitest + Testing Library, Playwright, ícones Phosphor; servido por nginx no Docker
 - **Infra:** Docker Compose, GitHub Actions (CI)
 
 ## Funcionalidades
@@ -136,7 +151,7 @@ docker-compose.yaml
 | Fila em RabbitMQ com prioridade, DLQ e reprocessamento | ✅ |
 | Frontend: login, cadastro de cliente, conversas, nova conversa, chat, saldo/limite no cabeçalho | ✅ |
 | Frontend: layout responsivo | ✅ |
-| Frontend: status visuais de mensagem com polling | ✅ |
+| Frontend: status visuais de mensagem em tempo real (SSE) | ✅ |
 | Docker Compose do conjunto | ✅ |
 
 ## Premissas
@@ -145,7 +160,7 @@ docker-compose.yaml
 - A sessão é um JWT (HS256) que vale 8 horas e continua valendo depois de um restart do backend. O segredo vem de `JWT_SECRET`, com pelo menos 32 bytes; o perfil `dev` e o docker-compose têm um valor de desenvolvimento.
 - O envio é simulado pelo worker (cada mensagem leva cerca de 8 s até `DELIVERED`).
 - A leitura é simulada: cerca de 4 s depois da entrega a mensagem vira `READ`. Isso vale até existir recebimento real de mensagens.
-- A atualização de status na tela é feita por polling (a cada 3 s, só da página mais recente e só enquanto alguma mensagem ainda vai mudar); não há WebSocket.
+- O status das mensagens chega por SSE (`GET /events`) assim que muda. Se a conexão cair, o frontend reconecta sozinho e, enquanto isso, volta ao polling (a cada 3 s, só da página mais recente e só enquanto alguma mensagem ainda vai mudar).
 - As listas são paginadas: o chat mostra as 50 mensagens mais recentes com "Carregar anteriores" (cursor `before`), e a barra lateral mostra 50 conversas com "Carregar mais" (`page`/`size`).
 - Para iniciar uma conversa, o contrato exige `recipientId` e `recipientName`. Não há cadastro de destinatários: o backend só armazena o id, e cada envio sem `conversationId` cria uma conversa nova.
 
@@ -158,6 +173,8 @@ docker-compose.yaml
 - **Recuperação:** ao iniciar, o backend devolve para a fila as mensagens que ficaram em `QUEUED`, `PROCESSING` ou `SENT` (backend derrubado no meio). A cada 30s, uma rotina republica as mensagens cuja publicação falhou (RabbitMQ fora do ar no envio), identificadas por `enqueued_at` nulo, sem precisar reiniciar o backend.
 - **Extrato:** `GET /clients/{id}/ledger` lista os débitos de envio e os estornos (`tb_ledger_entries`), gravados na mesma transação que altera saldo/limite.
 - **Autenticação e erros:** a senha é guardada como hash BCrypt. O `POST /auth` emite um JWT com o id do cliente no `sub`, e o resource server do Spring Security valida a assinatura e a expiração em toda rota protegida, respondendo `401` antes do controller. Documento inexistente e senha errada dão a mesma mensagem, para não revelar quais documentos estão cadastrados. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 de token, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
+- **Tempo real:** SSE (`SseEmitter`) em vez de WebSocket, porque a comunicação é só do servidor para o navegador. O stream é lido com `fetch`, e não com `EventSource`, para mandar o token no header `Authorization` em vez de na URL. As conexões ficam em memória, o que basta com uma instância do backend.
+- **Tipos do frontend gerados do backend:** `frontend/openapi.json` é o contrato versionado. Um teste de integração do backend falha quando ele diverge do `/v3/api-docs`, e o CI falha se `npm run api:types` mudar os tipos gerados. Assim, uma mudança de DTO no backend quebra o build do frontend em vez de passar despercebida.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.
 - **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema ainda só envia mensagens. Fica no modelo para a troca real de mensagens.

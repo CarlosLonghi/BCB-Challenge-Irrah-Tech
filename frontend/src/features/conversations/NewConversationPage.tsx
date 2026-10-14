@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useSession } from '@/features/auth/useAuth';
 import { MessageComposer } from '@/features/chat/MessageComposer';
 import { useSendMessage } from '@/features/chat/useSendMessage';

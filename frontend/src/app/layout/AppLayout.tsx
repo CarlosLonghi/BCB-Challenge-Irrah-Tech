@@ -1,4 +1,4 @@
-import { Outlet, useMatch } from 'react-router-dom';
+import { Outlet, useMatch } from 'react-router';
 import { useSession } from '@/features/auth/useAuth';
 import { ConversationList } from '@/features/conversations/ConversationList';
 import { AppDataProvider } from '../AppDataProvider';

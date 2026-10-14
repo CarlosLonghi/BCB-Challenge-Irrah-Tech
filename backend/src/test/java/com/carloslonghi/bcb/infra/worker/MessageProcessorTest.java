@@ -7,6 +7,7 @@ import org.mockito.Spy;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
 import com.carloslonghi.bcb.repository.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,7 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -34,6 +36,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +48,8 @@ class MessageProcessorTest {
     private MessageRepository messageRepository;
     @Spy
     private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    @Mock
+    private ApplicationEventPublisher events;
 
     @InjectMocks
     private MessageProcessor messageProcessor;
@@ -60,16 +65,19 @@ class MessageProcessorTest {
 
     @ParameterizedTest
     @EnumSource(value = MessageStatus.class, names = {"QUEUED", "PROCESSING", "SENT"})
-    @DisplayName("mensagem pendente passa por PROCESSING, SENT e DELIVERED (com a hora da entrega), nessa ordem")
+    @DisplayName("mensagem pendente passa por PROCESSING, SENT e DELIVERED (com a hora da entrega), avisando cada etapa")
     void processesPendingMessage(MessageStatus status) throws InterruptedException {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(messageWithStatus(status)));
 
         messageProcessor.process(1L);
 
-        InOrder inOrder = inOrder(messageRepository);
+        InOrder inOrder = inOrder(messageRepository, events);
         inOrder.verify(messageRepository).updateStatus(1L, MessageStatus.PROCESSING);
+        inOrder.verify(events).publishEvent(new MessageStatusChanged(1L, 7L, 1L, MessageStatus.PROCESSING));
         inOrder.verify(messageRepository).updateStatus(1L, MessageStatus.SENT);
+        inOrder.verify(events).publishEvent(new MessageStatusChanged(1L, 7L, 1L, MessageStatus.SENT));
         inOrder.verify(messageRepository).markDelivered(1L, NOW);
+        inOrder.verify(events).publishEvent(new MessageStatusChanged(1L, 7L, 1L, MessageStatus.DELIVERED));
     }
 
     @ParameterizedTest
@@ -81,6 +89,7 @@ class MessageProcessorTest {
         messageProcessor.process(1L);
 
         verify(messageRepository, never()).updateStatus(anyLong(), any());
+        verifyNoInteractions(events);
     }
 
     @Test

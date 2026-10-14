@@ -12,7 +12,7 @@ public record ErrorResponse(
         int status,
         String error,
 
-        @Schema(description = "Texto para mostrar ao usuário", example = "Saldo insuficiente.")
+        @Schema(types = {"string", "null"}, description = "Texto para mostrar ao usuário", example = "Saldo insuficiente.")
         String message,
 
         String path
