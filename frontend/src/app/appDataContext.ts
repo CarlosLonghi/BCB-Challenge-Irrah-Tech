@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
-import type { Balance, Conversation } from '@/shared/api/types';
+import type { ConversationPages } from '@/features/conversations/useConversationPages';
+import type { Balance } from '@/shared/api/types';
 import type { FetchState } from '@/shared/hooks/useFetch';
 
 /**
@@ -8,7 +9,7 @@ import type { FetchState } from '@/shared/hooks/useFetch';
  */
 export interface AppData {
   balance: FetchState<Balance>;
-  conversations: FetchState<Conversation[]>;
+  conversations: ConversationPages;
 }
 
 // Arquivo separado do provider: o lint (react-refresh/only-export-components) pede que

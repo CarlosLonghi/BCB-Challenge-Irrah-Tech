@@ -8,14 +8,20 @@ import styles from './ConversationList.module.css';
 
 /** Coluna da esquerda: conversas do cliente, a mais recente primeiro (ordem do backend). */
 export function ConversationList() {
-  const { data: conversations, isPending, error, reload } = useAppData().conversations;
+  const { data: conversations, isPending, error, reload, hasMore, loadMore, isLoadingMore, loadMoreError } =
+    useAppData().conversations;
 
   return (
     <aside className={styles.list}>
       <div className={styles.top}>
         <div className={styles.title}>
           <h2>Conversas</h2>
-          {conversations ? <span className={`mono ${styles.count}`}>{conversations.length}</span> : null}
+          {conversations ? (
+            <span className={`mono ${styles.count}`}>
+              {conversations.length}
+              {hasMore ? '+' : ''}
+            </span>
+          ) : null}
         </div>
         <Link to="/conversas/nova" className="button button--small">
           <PlusIcon size={14} weight="bold" aria-hidden="true" />
@@ -35,6 +41,14 @@ export function ConversationList() {
             <ConversationItem conversation={conversation} />
           </li>
         ))}
+        {hasMore ? (
+          <li className={styles.more}>
+            <ErrorMessage error={loadMoreError} />
+            <button type="button" className="button button--ghost button--small" onClick={loadMore} disabled={isLoadingMore}>
+              {isLoadingMore ? 'Carregando...' : 'Carregar mais'}
+            </button>
+          </li>
+        ) : null}
       </ul>
     </aside>
   );

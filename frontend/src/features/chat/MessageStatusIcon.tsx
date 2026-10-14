@@ -2,7 +2,7 @@ import { CheckIcon, ChecksIcon, CircleNotchIcon, ClockIcon, WarningCircleIcon, t
 import type { MessageStatus } from '@/shared/api/types';
 import styles from './MessageStatusIcon.module.css';
 
-// Ícone + texto de cada status. READ existe no enum, mas o backend ainda não o atribui.
+// Ícone + texto de cada status. READ é simulado pelo backend alguns segundos depois da entrega.
 const STATUS: Record<MessageStatus, { Icon: Icon; label: string }> = {
   QUEUED: { Icon: ClockIcon, label: 'Na fila' },
   PROCESSING: { Icon: CircleNotchIcon, label: 'Enviando' },

@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from 'react';
 import { getBalance } from '@/features/account/api';
-import { listConversations } from '@/features/conversations/api';
+import { useConversationPages } from '@/features/conversations/useConversationPages';
 import { useFetch } from '@/shared/hooks/useFetch';
 import { AppDataContext } from './appDataContext';
 
@@ -11,7 +11,7 @@ import { AppDataContext } from './appDataContext';
  */
 export function AppDataProvider({ clientId, children }: { clientId: number; children: ReactNode }) {
   const balance = useFetch(useCallback(() => getBalance(clientId), [clientId]));
-  const conversations = useFetch(listConversations);
+  const conversations = useConversationPages();
 
   return <AppDataContext.Provider value={{ balance, conversations }}>{children}</AppDataContext.Provider>;
 }
