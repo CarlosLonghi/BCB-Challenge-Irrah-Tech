@@ -8,6 +8,9 @@ import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.repository.ConversationRepository;
 import com.carloslonghi.bcb.repository.MessageRepository;
+import com.carloslonghi.bcb.utils.PageLimit;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,11 +25,15 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
 
-    public List<Conversation> findAll() {
+    private static final Sort MOST_RECENT_FIRST = Sort.by(Sort.Order.desc("lastMessageTime"), Sort.Order.desc("id"));
+
+    // Paginada por page/size: a ordem por lastMessageTime muda a cada envio, entao nao serve de cursor
+    public List<Conversation> findAll(int page, int size) {
         Long authId = (Long) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
-        return conversationRepository.findByClientIdOrderByLastMessageTimeDesc(authId);
+        return conversationRepository.findByClientId(authId,
+                PageRequest.of(Math.max(page, 0), PageLimit.clamp(size), MOST_RECENT_FIRST));
     }
 
     // Conversa de outro cliente conta como inexistente
@@ -59,8 +66,12 @@ public class ConversationService {
         return conversationRepository.save(conversation);
     }
 
-    public List<Message> findMessages(Long conversationId) {
+    // As "limit" mais recentes antes do cursor, devolvidas em ordem crescente (como o chat mostra)
+    public List<Message> findMessages(Long conversationId, Long before, int limit) {
         Conversation conversation = findById(conversationId);
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversation.getId());
+        List<Message> newestFirst = before == null
+                ? messageRepository.findByConversationIdOrderByIdDesc(conversation.getId(), PageLimit.of(limit))
+                : messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(conversation.getId(), before, PageLimit.of(limit));
+        return newestFirst.reversed();
     }
 }

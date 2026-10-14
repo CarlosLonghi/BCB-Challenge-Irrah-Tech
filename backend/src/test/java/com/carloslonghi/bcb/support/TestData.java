@@ -41,7 +41,7 @@ public final class TestData {
         Conversation conversation = new Conversation();
         conversation.setId(id);
         conversation.setClient(client);
-        conversation.setRecipientId(55);
+        conversation.setRecipientId(55L);
         conversation.setRecipientName("Maria Souza");
         conversation.setLastMessageContent("Oi");
         conversation.setLastMessageTime(Instant.parse("2026-01-01T10:00:00Z"));

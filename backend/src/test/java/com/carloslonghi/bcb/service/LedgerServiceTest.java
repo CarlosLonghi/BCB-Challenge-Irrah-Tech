@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.service;
 
+import org.springframework.data.domain.Limit;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.LedgerEntry;
 import com.carloslonghi.bcb.entity.Message;
@@ -69,9 +70,19 @@ class LedgerServiceTest {
         Client client = prePaidClient(1L, "10.00");
         List<LedgerEntry> entries = List.of(new LedgerEntry());
         when(clientService.findById(1L)).thenReturn(client);
-        when(ledgerEntryRepository.findByClientId(1L)).thenReturn(entries);
+        when(ledgerEntryRepository.findByClientIdOrderByIdDesc(1L, Limit.of(50))).thenReturn(entries);
 
-        assertThat(ledgerService.findByClient(1L)).isSameAs(entries);
+        assertThat(ledgerService.findByClient(1L, null, 50)).isSameAs(entries);
+    }
+
+    @Test
+    @DisplayName("findByClient com cursor busca os lançamentos anteriores a ele")
+    void findsLedgerBeforeCursor() {
+        List<LedgerEntry> entries = List.of(new LedgerEntry());
+        when(clientService.findById(1L)).thenReturn(prePaidClient(1L, "10.00"));
+        when(ledgerEntryRepository.findByClientIdAndIdLessThanOrderByIdDesc(1L, 30L, Limit.of(10))).thenReturn(entries);
+
+        assertThat(ledgerService.findByClient(1L, 30L, 10)).isSameAs(entries);
     }
 
     @Test
@@ -79,7 +90,7 @@ class LedgerServiceTest {
     void otherClientLedger() {
         when(clientService.findById(2L)).thenThrow(new ClientAccessDeniedException());
 
-        assertThatThrownBy(() -> ledgerService.findByClient(2L))
+        assertThatThrownBy(() -> ledgerService.findByClient(2L, null, 50))
                 .isInstanceOf(ClientAccessDeniedException.class);
         verifyNoInteractions(ledgerEntryRepository);
     }

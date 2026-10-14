@@ -17,12 +17,12 @@ public class Conversation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
     @Column(name = "recipient_id", nullable = false)
-    private int recipientId;
+    private Long recipientId;
 
     @Column(name = "recipient_name", nullable = false)
     private String recipientName;

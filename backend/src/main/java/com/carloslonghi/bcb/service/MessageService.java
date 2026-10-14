@@ -12,6 +12,7 @@ import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import com.carloslonghi.bcb.repository.ConversationRepository;
 import com.carloslonghi.bcb.repository.MessageRepository;
+import com.carloslonghi.bcb.utils.PageLimit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -95,11 +96,14 @@ public class MessageService {
         ledgerService.record(sender, message, LedgerEntryType.REFUND, message.getCost());
     }
 
-    public List<Message> findAll() {
+    // Mensagens do cliente, mais recente primeiro, paginadas por id
+    public List<Message> findAll(Long before, int limit) {
         Long authId = (Long) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();
 
-        return messageRepository.findBySenderId(authId);
+        return before == null
+                ? messageRepository.findBySenderIdOrderByIdDesc(authId, PageLimit.of(limit))
+                : messageRepository.findBySenderIdAndIdLessThanOrderByIdDesc(authId, before, PageLimit.of(limit));
     }
 
     public Message findById(Long id) {

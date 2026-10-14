@@ -62,11 +62,11 @@ class MessageControllerTest {
     @DisplayName("findAll e findById devolvem as mensagens mapeadas")
     void findAllAndById() {
         MessageResponse messageResponse = mock(MessageResponse.class);
-        when(messageService.findAll()).thenReturn(List.of(message));
+        when(messageService.findAll(5L, 20)).thenReturn(List.of(message));
         when(messageService.findById(1L)).thenReturn(message);
         when(messageMapper.toResponse(message)).thenReturn(messageResponse);
 
-        assertThat(controller.findAll().getBody()).containsExactly(messageResponse);
+        assertThat(controller.findAll(5L, 20).getBody()).containsExactly(messageResponse);
         assertThat(controller.findById(1L).getBody()).isSameAs(messageResponse);
     }
 

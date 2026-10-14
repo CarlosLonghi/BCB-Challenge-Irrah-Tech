@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -234,6 +235,8 @@ public interface ClientApi {
             )
     })
     ResponseEntity<List<LedgerEntryResponse>> getLedger(
-            @Parameter(description = "ID do cliente", required = true) @PathVariable Long id
+            @Parameter(description = "ID do cliente", required = true) @PathVariable Long id,
+            @Parameter(description = "Cursor: só itens com id menor que este; omitir para começar dos mais recentes") @RequestParam(required = false) Long before,
+            @Parameter(description = "Itens por página: padrão 50, ajustado para 1..100") @RequestParam(defaultValue = "50") int limit
     );
 }

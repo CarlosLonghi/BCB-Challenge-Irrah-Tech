@@ -20,16 +20,16 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "conversation_id", nullable = false)
     private Conversation conversation;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     private Client sender;
 
     @Column(name = "recipient_id")
-    private int recipientId;
+    private Long recipientId;
 
     @Column(name = "content", nullable = false)
     private String content;
@@ -51,4 +51,8 @@ public class Message {
     // Quando foi publicada no RabbitMQ; nulo enquanto a publicacao nao deu certo
     @Column(name = "enqueued_at")
     private Instant enqueuedAt;
+
+    // Quando chegou a DELIVERED; o ReadSimulator usa para marcar READ depois
+    @Column(name = "delivered_at")
+    private Instant deliveredAt;
 }

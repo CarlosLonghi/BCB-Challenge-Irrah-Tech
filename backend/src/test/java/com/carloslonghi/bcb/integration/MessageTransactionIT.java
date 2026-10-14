@@ -38,7 +38,7 @@ class MessageTransactionIT extends IntegrationTest {
         doThrow(new DataAccessResourceFailureException("banco caiu no meio do envio"))
                 .when(messageRepository).save(any(Message.class));
 
-        MessageRequest request = new MessageRequest(null, 55, "Maria Souza", "Olá", MessagePriority.URGENT);
+        MessageRequest request = new MessageRequest(null, 55L, "Maria Souza", "Olá", MessagePriority.URGENT);
         assertThatThrownBy(() -> messageService.sendMessage(request))
                 .isInstanceOf(DataAccessResourceFailureException.class);
 
@@ -56,7 +56,7 @@ class MessageTransactionIT extends IntegrationTest {
         AuthenticatedClient.login(clientId);
 
         Message message = messageService.sendMessage(
-                new MessageRequest(null, 55, "Maria Souza", "Olá", MessagePriority.URGENT));
+                new MessageRequest(null, 55L, "Maria Souza", "Olá", MessagePriority.URGENT));
 
         assertThat(balanceOf(clientId)).isEqualByComparingTo("9.50");
         assertThat(count("tb_conversations")).isEqualTo(1);

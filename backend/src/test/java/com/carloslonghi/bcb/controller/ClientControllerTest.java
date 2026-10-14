@@ -165,10 +165,10 @@ class ClientControllerTest {
         LedgerEntry entry = new LedgerEntry();
         LedgerEntryResponse entryResponse = new LedgerEntryResponse(3L, 9L, LedgerEntryType.REFUND,
                 new BigDecimal("0.25"), Instant.parse("2026-10-14T12:00:00Z"));
-        when(ledgerService.findByClient(1L)).thenReturn(List.of(entry));
+        when(ledgerService.findByClient(1L, 30L, 10)).thenReturn(List.of(entry));
         when(ledgerEntryMapper.toResponse(entry)).thenReturn(entryResponse);
 
-        ResponseEntity<List<LedgerEntryResponse>> response = controller.getLedger(1L);
+        ResponseEntity<List<LedgerEntryResponse>> response = controller.getLedger(1L, 30L, 10);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsExactly(entryResponse);

@@ -12,7 +12,7 @@ public record MessageRequest(
         Long conversationId,
 
         @Schema(description = "ID do destinatário; obrigatório só ao iniciar conversa", example = "55")
-        Integer recipientId,
+        Long recipientId,
 
         @Schema(description = "Nome do destinatário; obrigatório só ao iniciar conversa", example = "Maria Souza")
         @Size(max = 255, message = "Nome do destinatário deve ter no máximo 255 caracteres")

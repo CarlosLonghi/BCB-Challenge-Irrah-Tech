@@ -26,7 +26,7 @@ class QueueControllerTest {
     @Test
     @DisplayName("getStatus devolve o status da fila")
     void getStatus() {
-        QueueStatusResponse status = new QueueStatusResponse(3, 1, 2, 0, 0, 5, 0);
+        QueueStatusResponse status = new QueueStatusResponse(3, 1, 2, 0, 0, 5, 2, 0);
         when(queueStatusService.getStatus()).thenReturn(status);
 
         ResponseEntity<QueueStatusResponse> response = controller.getStatus();

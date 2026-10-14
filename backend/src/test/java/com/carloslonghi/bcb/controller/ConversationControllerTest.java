@@ -47,12 +47,12 @@ class ConversationControllerTest {
     private final ConversationResponse conversationResponse = mock(ConversationResponse.class);
 
     @Test
-    @DisplayName("findAll devolve as conversas mapeadas")
+    @DisplayName("findAll repassa página e tamanho e devolve as conversas mapeadas")
     void findAll() {
-        when(conversationService.findAll()).thenReturn(List.of(conversation));
+        when(conversationService.findAll(1, 20)).thenReturn(List.of(conversation));
         when(conversationMapper.toResponse(conversation)).thenReturn(conversationResponse);
 
-        ResponseEntity<List<ConversationResponse>> response = controller.findAll();
+        ResponseEntity<List<ConversationResponse>> response = controller.findAll(1, 20);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsExactly(conversationResponse);
@@ -71,14 +71,14 @@ class ConversationControllerTest {
     }
 
     @Test
-    @DisplayName("findMessagesByConversationId devolve as mensagens da conversa")
+    @DisplayName("findMessagesByConversationId repassa cursor e limite e devolve as mensagens da conversa")
     void findMessages() {
         Message message = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
         MessageResponse messageResponse = mock(MessageResponse.class);
-        when(conversationService.findMessages(7L)).thenReturn(List.of(message));
+        when(conversationService.findMessages(7L, 30L, 10)).thenReturn(List.of(message));
         when(messageMapper.toResponse(message)).thenReturn(messageResponse);
 
-        ResponseEntity<List<MessageResponse>> response = controller.findMessagesByConversationId(7L);
+        ResponseEntity<List<MessageResponse>> response = controller.findMessagesByConversationId(7L, 30L, 10);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).containsExactly(messageResponse);
@@ -87,9 +87,9 @@ class ConversationControllerTest {
     @Test
     @DisplayName("mensagens de conversa de outro cliente propagam not found")
     void messagesOfOtherClientConversation() {
-        when(conversationService.findMessages(8L)).thenThrow(new ReferencedEntityNotFoundException("Conversa", 8L));
+        when(conversationService.findMessages(8L, null, 50)).thenThrow(new ReferencedEntityNotFoundException("Conversa", 8L));
 
-        assertThatThrownBy(() -> controller.findMessagesByConversationId(8L))
+        assertThatThrownBy(() -> controller.findMessagesByConversationId(8L, null, 50))
                 .isInstanceOf(ReferencedEntityNotFoundException.class);
         verifyNoInteractions(messageMapper);
     }

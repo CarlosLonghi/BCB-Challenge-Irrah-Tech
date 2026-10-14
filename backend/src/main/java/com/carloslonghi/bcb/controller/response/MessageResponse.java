@@ -12,7 +12,7 @@ public record MessageResponse(
         Long id,
         Long conversationId,
         Long senderId,
-        int recipientId,
+        Long recipientId,
         String content,
 
         @Schema(description = "Data/hora de criação, em UTC", example = "2026-09-30T13:45:00.123Z")
@@ -20,7 +20,7 @@ public record MessageResponse(
 
         MessagePriority priority,
 
-        @Schema(description = "Status no ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED (ou FAILED)")
+        @Schema(description = "Status no ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED -> READ (ou FAILED). A leitura é simulada alguns segundos depois da entrega")
         MessageStatus status,
 
         BigDecimal cost

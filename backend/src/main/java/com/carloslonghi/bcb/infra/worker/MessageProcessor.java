@@ -6,10 +6,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.util.Set;
 
 /**
- * Simula o envio de uma mensagem: PROCESSING -> SENT -> DELIVERED.
+ * Simula o envio de uma mensagem: PROCESSING -> SENT -> DELIVERED (o READ vem depois, pelo ReadSimulator).
  * Cada etapa e gravada no banco, porque o frontend acompanha o status por polling.
  * Chamado pelo RabbitMessageListener.
  */
@@ -21,6 +22,7 @@ public class MessageProcessor {
             Set.of(MessageStatus.DELIVERED, MessageStatus.READ, MessageStatus.FAILED);
 
     private final MessageRepository messageRepository;
+    private final Clock clock;
 
     // Pausa entre as etapas; os testes zeram para nao esperar
     @Value("${bcb.worker.step-delay-ms:4000}")
@@ -42,6 +44,6 @@ public class MessageProcessor {
         messageRepository.updateStatus(messageId, MessageStatus.SENT);
         Thread.sleep(stepDelayMs);
 
-        messageRepository.updateStatus(messageId, MessageStatus.DELIVERED);
+        messageRepository.markDelivered(messageId, clock.instant());
     }
 }

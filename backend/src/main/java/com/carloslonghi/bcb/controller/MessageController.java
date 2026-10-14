@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.carloslonghi.bcb.utils.PageLimit;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,8 +32,9 @@ public class MessageController implements MessageApi {
     }
 
     @GetMapping
-    public ResponseEntity<List<MessageResponse>> findAll() {
-        List<MessageResponse> messages = messageService.findAll().stream()
+    public ResponseEntity<List<MessageResponse>> findAll(@RequestParam(required = false) Long before,
+                                                         @RequestParam(defaultValue = "" + PageLimit.DEFAULT) int limit) {
+        List<MessageResponse> messages = messageService.findAll(before, limit).stream()
                 .map(messageMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(messages);
