@@ -34,13 +34,13 @@ Tudo sobe com `docker compose up --build` (`docker-compose.yaml`).
 | `repository` | Spring Data JPA | Queries derivadas ou `@Query` |
 | `entity`, `entity/enums` | Entidades JPA (`Client`, `Conversation`, `Message`) e enums | Mudou aqui → migration nova (ver CLAUDE.md) |
 | `mapper` | MapStruct entidade ↔ DTO | Conversões |
-| `infra/queue` | `MessageQueue` (interface), `RabbitMessageQueue`, `PendingMessagesRecovery` | Publicação na fila |
+| `infra/queue` | `MessageQueue` (interface), `RabbitMessageQueue`, `PendingMessagesRecovery` (inicialização + rotina periódica) | Publicação na fila |
 | `infra/worker` | `RabbitMessageListener` (consumidor) e `MessageProcessor` (ciclo de status) | Processamento assíncrono |
-| `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
+| `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`), `AppConfig` (`Clock`, `@EnableScheduling`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
 | `exception` | Exceções de negócio, uma por caso | Erro novo: exceção + handler no advice |
 | `utils` | `DocumentValidator` (dígitos de CPF/CNPJ) | Funções puras |
 
-Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_schema.sql`, `V2__add_client_password.sql`). Config: `backend/src/main/resources/application.properties`, mais `application-dev.properties`, o perfil padrão quando nenhum está ativo (SQL no log, DEBUG do Security, segredo JWT de dev).
+Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_schema.sql`, `V2__add_client_password.sql`, `V3__add_message_enqueued_at.sql`, `V4__create_ledger_entries.sql`). Config: `backend/src/main/resources/application.properties`, mais `application-dev.properties`, o perfil padrão quando nenhum está ativo (SQL no log, DEBUG do Security, segredo JWT de dev).
 
 ## Fluxos principais
 
@@ -55,17 +55,22 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 1. `ClientRepository.findWithLockById` → `SELECT ... FOR UPDATE` na linha do cliente.
 2. `ConversationService.findOrCreate`: usa `conversationId` ou cria conversa com `recipientId` + `recipientName` (sem eles → `MissingRecipientException`).
 3. Custo: `NORMAL` R$ 0,25, `URGENT` R$ 0,50. `ClientService.debit`: pré-pago desconta de `balance`; pós-pago desconta de `limit` (o campo guarda o limite restante). Sem saldo/limite → 402.
-4. Grava a `Message` com status `QUEUED` e atualiza o resumo da conversa.
-5. `enqueueAfterCommit` publica no `MessageQueue` só depois do commit. Se a publicação falhar, a mensagem fica `QUEUED` no banco e é recuperada no próximo start.
+4. Grava a `Message` com status `QUEUED`, registra o `DEBIT` no extrato (`LedgerService.record`) e atualiza o resumo da conversa.
+5. `enqueueAfterCommit` publica no `MessageQueue` só depois do commit e grava `enqueued_at` (`MessageRepository.markEnqueued`, com `REQUIRES_NEW`, porque no `afterCommit` a transação original já terminou). Se a publicação falhar, a mensagem fica `QUEUED` com `enqueued_at` nulo, e a rotina periódica da recuperação a publica de novo.
 
 ### Processamento
 1. `RabbitMessageQueue` publica só o id, com prioridade AMQP 10 (urgente) ou 1 (normal), na fila `bcb.messages` (`x-max-priority` 10).
 2. `RabbitMessageListener` consome com `prefetch=1` e um consumidor: uma mensagem por vez, e as urgentes passam na frente das normais que estão esperando.
 3. `MessageProcessor.process`: `PROCESSING` → `SENT` → `DELIVERED`, gravando cada etapa com `MessageRepository.updateStatus` (pausa `bcb.worker.step-delay-ms`, padrão 4000; os testes zeram). Mensagem já finalizada é ignorada (idempotente).
-4. Exceção → retry do Spring (3 tentativas no total). Esgotadas, o `MessageRecoverer` do `RabbitConfig` marca `FAILED` e rejeita, e a mensagem vai para a `bcb.messages.dlq`. Não há estorno.
+4. Exceção → retry do Spring (3 tentativas no total). Esgotadas, o `MessageRecoverer` do `RabbitConfig` chama `MessageService.failAndRefund` e rejeita, e a mensagem vai para a `bcb.messages.dlq`. O `failAndRefund` (uma transação) trava o cliente, passa a mensagem de `QUEUED`/`PROCESSING`/`SENT` para `FAILED` com um update condicional (`updateStatusIfIn`) e, só se essa transição aconteceu, devolve o `cost` (`ClientService.refund`) e registra o `REFUND`. Uma segunda passagem pela mesma mensagem não estorna de novo.
 
-### Recuperação na inicialização
-`PendingMessagesRecovery` (no `ApplicationReadyEvent`) volta para `QUEUED` e reenfileira o que ficou em `QUEUED`, `PROCESSING` ou `SENT`, por ordem de criação. Falha numa mensagem não impede as outras.
+### Extrato
+`tb_ledger_entries` (`LedgerEntry`, `LedgerService`) tem um `DEBIT` por envio e um `REFUND` por mensagem que falhou, sempre gravados na mesma transação que altera saldo/limite. `GET /clients/{id}/ledger` lista do mais recente para o mais antigo; outro cliente → 403. O crédito inicial do cadastro não vira lançamento.
+
+### Recuperação
+`PendingMessagesRecovery` tem duas rotinas. Falha numa mensagem não impede as outras.
+- **Na inicialização** (`ApplicationReadyEvent`): o que ficou em `QUEUED`, `PROCESSING` ou `SENT` volta para `QUEUED` sem publicação (`resetToUnpublished`) e é reenfileirado por ordem de criação.
+- **Periódica** (`@Scheduled`, `bcb.recovery.unpublished-interval`, padrão 30s; `@EnableScheduling` no `AppConfig`): republica as `QUEUED` com `enqueued_at` nulo criadas há mais de `bcb.recovery.unpublished-grace` (10s). Ou seja, só as que nunca chegaram ao RabbitMQ, e não as que estão na fila esperando a vez.
 
 ### Erros
 `ApplicationControllerAdvice` converte exceções de negócio em `ErrorResponse` (400 validação/documento, 401, 402, 403, 404, 409). O que não passa por controller (401 de token, rota inexistente) sai pelo `/error` do Spring Boot no mesmo formato JSON (`spring.web.error.include-message=always`).
@@ -94,7 +99,8 @@ Rotas: `/login`, `/cadastro`, e dentro do layout protegido `/`, `/conversas/nova
 - Débito, mensagem e conversa na mesma transação, com o cliente travado por lock pessimista.
 - Publicar na fila só depois do commit.
 - O worker relê o estado do banco e ignora mensagem finalizada; receber o mesmo id duas vezes não pode reprocessar.
-- Status muda só via `MessageRepository.updateStatus` (não salvar a entidade inteira, que sobrescreveria com uma cópia antiga).
+- Status muda só por updates de coluna do `MessageRepository` (`updateStatus`, `updateStatusIfIn`, `resetToUnpublished`), nunca salvando a entidade inteira, que sobrescreveria com uma cópia antiga.
+- Saldo/limite e extrato andam juntos: todo `debit`/`refund` grava o lançamento na mesma transação. Estorno só depois da transição condicional para `FAILED`.
 - Schema só muda por migration Flyway nova; Hibernate em `validate`.
 - Saldo, limite e plano são definidos só no cadastro; `PUT /clients/{id}` só altera o nome.
 - O contrato da API usa enums em maiúsculas e ids numéricos; frontend (`shared/api/types.ts`) e backend precisam andar juntos.

@@ -30,9 +30,12 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Token / sessão | `AuthService.createToken`, `JwtConfig`, `oauth2ResourceServer` no `SecurityConfig` | JWT HS256 devolvido pelo `POST /auth` (`sub` = id do cliente), mandado como `Authorization: Bearer`. Expira em 8h (`bcb.security.jwt.ttl`) e continua valendo depois de um restart. |
 | Principal | `SecurityContextHolder...getPrincipal()` | O `Long` id do cliente logado; os services filtram tudo por ele. |
 | Fila | `MessageQueue`, `RabbitMessageQueue`, fila `bcb.messages` | Fila RabbitMQ com prioridade; carrega só o id da mensagem. |
-| DLQ | `bcb.messages.dlq` | Dead-letter queue: onde caem as mensagens que falharam 3 vezes (já marcadas `FAILED`). |
+| DLQ | `bcb.messages.dlq` | Dead-letter queue: onde caem as mensagens que falharam 3 vezes (já marcadas `FAILED` e estornadas). |
+| Estorno | `MessageService.failAndRefund`, `ClientService.refund`, `LedgerEntryType.REFUND` | Devolução do custo de uma mensagem que terminou em `FAILED`: ao saldo (pré-pago) ou ao limite (pós-pago). Acontece uma vez só por mensagem. |
+| Extrato / lançamento | `LedgerEntry` (`tb_ledger_entries`), `LedgerService`, `GET /clients/{id}/ledger` | Histórico de `DEBIT` (envio) e `REFUND` (estorno), com valor sempre positivo. |
+| Publicação | `Message.enqueuedAt` (`enqueued_at`) | Momento em que o id foi publicado no RabbitMQ. Nulo = commit feito, mas a publicação falhou. |
 | Worker | `RabbitMessageListener` + `MessageProcessor` | Consumidor que simula o envio e avança o status (cerca de 8 s até `DELIVERED`). |
-| Recuperação | `PendingMessagesRecovery` | Reenfileira as mensagens pendentes quando o backend sobe. |
+| Recuperação | `PendingMessagesRecovery` | Reenfileira as mensagens pendentes quando o backend sobe e, a cada 30s, republica as que nunca foram publicadas. |
 | Status da fila | `GET /queue/status`, `QueueStatusService` | Contagem por status/prioridade feita no banco. |
 | Migration | `db/migrations/V<n>__*.sql` | Única forma de mudar o schema (Flyway; Hibernate em `validate`). |
 | IT | `*IT.java` | Teste de integração (Testcontainers), roda no `mvnw verify`. |
@@ -41,5 +44,5 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 
 - Tipo de mensagem SMS/WhatsApp.
 - Reset mensal do limite pós-pago.
-- Administração de créditos/limites, conversão entre planos e histórico de transações financeiras. Saldo e limite são definidos só no cadastro; `PUT /clients/{id}` altera só o nome.
-- Estorno de mensagem `FAILED` e reenvio.
+- Administração de créditos/limites e conversão entre planos. Saldo e limite são definidos só no cadastro; `PUT /clients/{id}` altera só o nome.
+- Reenvio de mensagem `FAILED` (o estorno existe; reenviar cobraria de novo).

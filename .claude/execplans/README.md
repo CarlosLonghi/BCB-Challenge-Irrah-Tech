@@ -10,4 +10,5 @@ _Nenhum._
 
 ## Concluídos
 
+- [2026-10-14-fila-estorno-extrato.md](2026-10-14-fila-estorno-extrato.md): estorno no FAILED, extrato e republicação periódica
 - [2026-10-14-auth-senha-jwt.md](2026-10-14-auth-senha-jwt.md): senha no login e JWT no lugar do token em memória
