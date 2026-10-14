@@ -1,0 +1,9 @@
+# Coleta as métricas do backend pela porta de gerência (8081), que só existe na rede interna do compose.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: backend
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: [ "backend:8081" ]

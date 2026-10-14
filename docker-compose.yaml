@@ -1,3 +1,7 @@
+# Credenciais e segredo vêm do .env na raiz (copie de .env.example); sem ele valem os padrões de dev abaixo.
+# Banco, RabbitMQ e o painel ficam publicados só em 127.0.0.1: dá para usar do próprio computador
+# (backend ou frontend rodando fora do Docker), mas ninguém da rede alcança.
+
 services:
   db:
     image: postgres:16-alpine
@@ -5,14 +9,14 @@ services:
     restart: always
     environment:
       POSTGRES_DB: bcb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d bcb" ]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d bcb" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,11 +26,11 @@ services:
     container_name: bcb-rabbitmq
     restart: always
     ports:
-      - "5672:5672"
-      - "15672:15672"   # painel de gerenciamento (guest / guest)
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"   # painel de gerenciamento (usuário e senha de RABBITMQ_USER/RABBITMQ_PASSWORD)
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
@@ -46,27 +50,24 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    # Só a API. O Actuator (8081: health e métricas) fica na rede interna: o healthcheck da imagem e o
+    # Prometheus (perfil observability) chegam nele por dentro
     ports:
       - "8080:8080"
     environment:
       # Qualquer perfil diferente de "dev": sem SQL no log e sem DEBUG do Spring Security
       SPRING_PROFILES_ACTIVE: docker
-      # Segredo do JWT (min. 32 bytes). Defina JWT_SECRET no shell ou num .env para trocar o valor de dev
+      # Logs em JSON (formato ECS), com trace.id para seguir uma requisição até o worker
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+      # Segredo do JWT (mín. 32 bytes)
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-troque-em-producao-0123456789}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/bcb
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
-      SPRING_RABBITMQ_USERNAME: guest
-      SPRING_RABBITMQ_PASSWORD: guest
-    healthcheck:
-      # A imagem eclipse-temurin:*-alpine tem wget (busybox), mas não tem curl.
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health > /dev/null || exit 1" ]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
 
   frontend:
     build:
@@ -80,7 +81,20 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "3000:80"   # build estático servido por nginx
+      - "3000:8080"   # build estático servido por nginx sem root
+
+  # Opcional: docker compose --profile observability up -d → http://localhost:9090
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: bcb-prometheus
+    profiles: [ observability ]
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
 volumes:
   db_data:
