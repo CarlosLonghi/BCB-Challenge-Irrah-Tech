@@ -1,6 +1,9 @@
 package com.carloslonghi.bcb.infra.events;
 
 import com.carloslonghi.bcb.controller.response.MessageStatusEventResponse;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.MeterBinder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -21,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Component
-public class MessageEventStream {
+public class MessageEventStream implements MeterBinder {
 
     public static final String STATUS_EVENT = "message-status";
     public static final String READY_EVENT = "ready";
@@ -66,6 +69,14 @@ public class MessageEventStream {
     public void heartbeat() {
         emitters.forEach((clientId, clientEmitters) ->
                 clientEmitters.forEach(emitter -> send(clientId, emitter, SseEmitter.event().comment("ping"))));
+    }
+
+    // bcb_events_connections: abas com o stream aberto
+    @Override
+    public void bindTo(MeterRegistry registry) {
+        Gauge.builder("bcb.events.connections", emitters, map -> map.values().stream().mapToInt(Set::size).sum())
+                .description("Conexoes SSE abertas")
+                .register(registry);
     }
 
     int connections(Long clientId) {

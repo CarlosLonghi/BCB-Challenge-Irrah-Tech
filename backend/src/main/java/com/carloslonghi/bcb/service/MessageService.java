@@ -3,6 +3,7 @@ package com.carloslonghi.bcb.service;
 import com.carloslonghi.bcb.controller.request.MessageRequest;
 import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
 import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
+import com.carloslonghi.bcb.infra.metrics.MessageMetrics;
 import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
@@ -45,6 +46,7 @@ public class MessageService {
     private final MessageQueue messageQueue;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final MessageMetrics metrics;
 
     private static final Set<MessageStatus> PENDING_STATUSES =
             Set.of(MessageStatus.QUEUED, MessageStatus.PROCESSING, MessageStatus.SENT);
@@ -97,6 +99,7 @@ public class MessageService {
 
         clientService.refund(sender, message.getCost());
         ledgerService.record(sender, message, LedgerEntryType.REFUND, message.getCost());
+        metrics.failed(message.getPriority());
         // Entregue ao SSE so depois do commit (o frontend recarrega o saldo ao receber o FAILED)
         events.publishEvent(new MessageStatusChanged(
                 sender.getId(), message.getConversation().getId(), messageId, MessageStatus.FAILED));
@@ -143,6 +146,7 @@ public class MessageService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                metrics.sent(message.getPriority());
                 // O debito ja foi gravado; se a fila estiver fora do ar a mensagem fica QUEUED com enqueued_at
                 // nulo, e a rotina periodica do PendingMessagesRecovery a publica de novo
                 try {
@@ -151,6 +155,7 @@ public class MessageService {
                     log.error("Nao foi possivel enfileirar a mensagem {}", message.getId(), e);
                     return;
                 }
+                log.info("Mensagem {} enfileirada (prioridade {})", message.getId(), message.getPriority());
                 // Se so a marcacao falhar, a rotina periodica publica de novo; o worker ignora a duplicata
                 try {
                     messageRepository.markEnqueued(message.getId(), clock.instant());

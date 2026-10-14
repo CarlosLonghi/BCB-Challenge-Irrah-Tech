@@ -3,13 +3,17 @@ package com.carloslonghi.bcb.infra.worker;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
+import com.carloslonghi.bcb.infra.metrics.MessageMetrics;
 import com.carloslonghi.bcb.repository.MessageRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Set;
 
 /**
@@ -17,6 +21,7 @@ import java.util.Set;
  * Cada etapa e gravada no banco e publicada como MessageStatusChanged (o frontend recebe por SSE).
  * Chamado pelo RabbitMessageListener.
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class MessageProcessor {
@@ -27,6 +32,7 @@ public class MessageProcessor {
     private final MessageRepository messageRepository;
     private final Clock clock;
     private final ApplicationEventPublisher events;
+    private final MessageMetrics metrics;
 
     // Pausa entre as etapas; os testes zeram para nao esperar
     @Value("${bcb.worker.step-delay-ms:4000}")
@@ -48,8 +54,13 @@ public class MessageProcessor {
         publish(message, MessageStatus.SENT);
         Thread.sleep(stepDelayMs);
 
-        messageRepository.markDelivered(messageId, clock.instant());
+        Instant deliveredAt = clock.instant();
+        messageRepository.markDelivered(messageId, deliveredAt);
         publish(message, MessageStatus.DELIVERED);
+        Duration sinceCreation = Duration.between(message.getCreatedAt(), deliveredAt);
+        metrics.delivered(message.getPriority(), sinceCreation);
+        // Mesmo trace.id do log "enfileirada" da requisicao: o traceId vem nos headers da mensagem do RabbitMQ
+        log.info("Mensagem {} entregue {} ms depois de criada", messageId, sinceCreation.toMillis());
     }
 
     // getId() das associacoes LAZY nao vai ao banco: o proxy ja conhece o id
