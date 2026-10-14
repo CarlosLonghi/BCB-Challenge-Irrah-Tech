@@ -1,15 +1,18 @@
 import { createContext, useContext } from 'react';
 import type { ConversationPages } from '@/features/conversations/useConversationPages';
 import type { Balance } from '@/shared/api/types';
+import type { EventStream } from '@/shared/hooks/useEventStream';
 import type { FetchState } from '@/shared/hooks/useFetch';
 
 /**
  * Dados usados por mais de uma parte da tela: o cabeçalho mostra o saldo, a coluna da
  * esquerda mostra as conversas, e o envio de mensagem (no chat) precisa atualizar os dois.
+ * `events` é a conexão SSE única da tela logada (status das mensagens em tempo real).
  */
 export interface AppData {
   balance: FetchState<Balance>;
   conversations: ConversationPages;
+  events: EventStream;
 }
 
 // Arquivo separado do provider: o lint (react-refresh/only-export-components) pede que

@@ -1,5 +1,5 @@
 import { PlusIcon } from '@phosphor-icons/react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { ErrorMessage } from '@/shared/components/ErrorMessage';
 import { Loading } from '@/shared/components/Loading';
 import { useAppData } from '@/app/appDataContext';

@@ -11,8 +11,8 @@ export const PRIORITY_COST: Record<Priority, number> = {
 export const MAX_MESSAGE_LENGTH = 255;
 
 /**
- * Status que ainda vão mudar no backend; enquanto houver algum, a tela faz polling.
- * DELIVERED entra porque a leitura (READ) é simulada alguns segundos depois da entrega.
+ * Status que ainda vão mudar no backend; enquanto houver algum e o stream de eventos estiver fora, a tela
+ * faz polling. DELIVERED entra porque a leitura (READ) é simulada alguns segundos depois da entrega.
  */
 const PENDING_STATUSES: MessageStatus[] = ['QUEUED', 'PROCESSING', 'SENT', 'DELIVERED'];
 

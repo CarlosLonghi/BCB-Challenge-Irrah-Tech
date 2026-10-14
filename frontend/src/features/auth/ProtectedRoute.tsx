@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router';
 import { useAuth } from './useAuth';
 
 /** Só renderiza as rotas filhas com sessão; sem ela, manda para o login. */
