@@ -43,6 +43,9 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Migration | `db/migrations/V<n>__*.sql` | Única forma de mudar o schema (Flyway; Hibernate em `validate`). |
 | IT | `*IT.java` | Teste de integração (Testcontainers), roda no `mvnw verify`. |
 | E2E | `frontend/e2e/*.spec.ts` | Teste de ponta a ponta com Playwright contra o docker-compose. |
+| Trace id | `traceId` nos logs, header `X-Trace-Id`, `TraceIdHeaderFilter` | Id de correlação de uma requisição; segue pelo RabbitMQ até o worker. |
+| Métricas | `/actuator/prometheus` (porta 8081), `MessageMetrics`, `QueueMetrics` | Contadores e tempos no formato Prometheus (`bcb_*`). |
+| Rate limit | `RateLimitFilter`, `bcb.rate-limit.*` | Limite de tentativas por IP em `POST /auth` e `POST /clients`; estourou → 429. |
 
 ## Do enunciado, mas não implementado
 

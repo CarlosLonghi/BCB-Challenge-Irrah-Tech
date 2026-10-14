@@ -22,10 +22,17 @@ docker compose up --build
 | Frontend | http://localhost:3000 |
 | API | http://localhost:8080 |
 | Swagger | http://localhost:8080/swagger-ui/index.html |
-| RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`) |
-| PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`) |
+| RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`) |
+| PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`, ou os valores do `.env`) |
+| Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d` |
 
 Para parar e apagar os dados: `docker compose down -v`.
+
+### Configuração (`.env`)
+
+Sem `.env`, o compose usa credenciais e um segredo JWT de desenvolvimento. Para trocar, copie `.env.example` para `.env` na raiz e ajuste os valores: senha do Postgres, usuário e senha do RabbitMQ e `JWT_SECRET`. A senha do Postgres só vale na criação do volume. Com um banco já criado, mudá-la exige `docker compose down -v`, que apaga os dados.
+
+O PostgreSQL, o RabbitMQ e o painel ficam publicados só em `127.0.0.1`. A API (8080) e o frontend (3000) ficam abertos. O Actuator (health e métricas) usa a porta 8081, que não é publicada: dá para consultá-lo com `docker exec bcb-app wget -qO- localhost:8081/actuator/prometheus`.
 
 ### Primeiro acesso
 
@@ -129,7 +136,9 @@ gh pr create
 backend/    API Spring Boot (Java 21, PostgreSQL, RabbitMQ)
 frontend/   Interface React
 docs/       enunciado e regras do desafio
+observability/   configuração do Prometheus (perfil observability do compose)
 docker-compose.yaml
+.env.example     credenciais e segredo do compose
 ```
 
 ## Tecnologias
@@ -137,7 +146,8 @@ docker-compose.yaml
 - **Backend:** Java 21, Spring Boot 4.1 (Web, Security, Data JPA, Validation, AMQP, Actuator), PostgreSQL, Flyway, RabbitMQ, MapStruct, Lombok, springdoc-openapi 3 (Swagger)
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 19 + TypeScript + Vite, React Router 7, CSS Modules, tipos gerados do OpenAPI (openapi-typescript), Vitest + Testing Library, Playwright, ícones Phosphor; servido por nginx no Docker
-- **Infra:** Docker Compose, GitHub Actions (CI)
+- **Infra:** Docker Compose, GitHub Actions (CI), Dependabot
+- **Operação:** Micrometer + Prometheus, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
 
 ## Funcionalidades
 
@@ -174,6 +184,13 @@ docker-compose.yaml
 - **Extrato:** `GET /clients/{id}/ledger` lista os débitos de envio e os estornos (`tb_ledger_entries`), gravados na mesma transação que altera saldo/limite.
 - **Autenticação e erros:** a senha é guardada como hash BCrypt. O `POST /auth` emite um JWT com o id do cliente no `sub`, e o resource server do Spring Security valida a assinatura e a expiração em toda rota protegida, respondendo `401` antes do controller. Documento inexistente e senha errada dão a mesma mensagem, para não revelar quais documentos estão cadastrados. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 de token, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
 - **Tempo real:** SSE (`SseEmitter`) em vez de WebSocket, porque a comunicação é só do servidor para o navegador. O stream é lido com `fetch`, e não com `EventSource`, para mandar o token no header `Authorization` em vez de na URL. As conexões ficam em memória, o que basta com uma instância do backend.
+- **Imagens Docker:** as duas rodam sem root (backend com o usuário `app`; frontend com `nginx-unprivileged`, na porta 8080 do container) e têm `HEALTHCHECK`. O build do backend baixa as dependências numa camada própria, então mudar só o código não baixa tudo de novo.
+- **Observabilidade:**
+  - Métricas em `/actuator/prometheus`, na porta de gerência 8081, fora do alcance da rede. Além das do Spring (HTTP, JVM, Hikari, RabbitMQ), há métricas próprias: `bcb_messages_sent_total`, `bcb_messages_delivery_seconds` (da criação até a entrega, por prioridade), `bcb_messages_failed_total`, `bcb_queue_messages` (fila e DLQ) e `bcb_events_connections`.
+  - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
+  - Toda resposta traz `X-Trace-Id`.
+- **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.
+- **Dependências:** o Dependabot abre PRs semanais (maven, npm, imagens Docker e actions), com minor e patch agrupadas.
 - **Tipos do frontend gerados do backend:** `frontend/openapi.json` é o contrato versionado. Um teste de integração do backend falha quando ele diverge do `/v3/api-docs`, e o CI falha se `npm run api:types` mudar os tipos gerados. Assim, uma mudança de DTO no backend quebra o build do frontend em vez de passar despercebida.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.

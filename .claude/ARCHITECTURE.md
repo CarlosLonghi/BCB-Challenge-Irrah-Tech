@@ -13,15 +13,15 @@ Empresas (clientes) mandam mensagens pagas para destinatários. A API debita o c
  frontend  React + Vite, servido por nginx  (:3000 no Docker, :5173 no dev)
     │  HTTP + Authorization: Bearer <token>; status em tempo real por SSE (GET /events)
     ▼
- backend   Spring Boot, Java 21              (:8080, Swagger em /swagger-ui/index.html)
+ backend   Spring Boot, Java 21              (:8080, Swagger em /swagger-ui/index.html; Actuator em :8081)
     │                         │
     ▼                         ▼
- PostgreSQL (:5432)        RabbitMQ (:5672, painel :15672)
+ PostgreSQL (:5432)        RabbitMQ (:5672, painel :15672)   (publicados só em 127.0.0.1)
   schema via Flyway          fila bcb.messages (prioridade) ──► worker no próprio backend
                              DLQ  bcb.messages.dlq
 ```
 
-Tudo sobe com `docker compose up --build` (`docker-compose.yaml`).
+Tudo sobe com `docker compose up --build` (`docker-compose.yaml`; credenciais em `.env`, modelo em `.env.example`). Com `--profile observability`, sobe também um Prometheus (:9090) que coleta do backend em `backend:8081` (`observability/prometheus.yml`).
 
 ## Backend (`backend/src/main/java/com/carloslonghi/bcb`)
 
@@ -37,7 +37,8 @@ Tudo sobe com `docker compose up --build` (`docker-compose.yaml`).
 | `infra/queue` | `MessageQueue` (interface), `RabbitMessageQueue`, `PendingMessagesRecovery` (inicialização + rotina periódica) | Publicação na fila |
 | `infra/worker` | `RabbitMessageListener` (consumidor), `MessageProcessor` (ciclo de status) e `ReadSimulator` (leitura simulada) | Processamento assíncrono |
 | `infra/events` | `MessageStatusChanged` (evento de domínio) e `MessageEventStream` (conexões SSE por cliente) | Aviso em tempo real ao frontend |
-| `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`), `AppConfig` (`Clock`, `@EnableScheduling`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
+| `infra/metrics` | `MessageMetrics` (contadores e timer do ciclo da mensagem) | Métrica de negócio nova |
+| `config` | Segurança (`SecurityConfig`, `JwtConfig`, `JwtProperties`, `RateLimitFilter`/`RateLimitProperties`), `TraceIdHeaderFilter`, `AppConfig` (`Clock`, `@EnableScheduling`), RabbitMQ, Swagger, `ApplicationControllerAdvice` | Infraestrutura e mapeamento de erro |
 | `exception` | Exceções de negócio, uma por caso | Erro novo: exceção + handler no advice |
 | `utils` | `DocumentValidator` (dígitos de CPF/CNPJ), `PageLimit` | Funções puras |
 
@@ -49,7 +50,8 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 1. `POST /clients` grava a senha como hash BCrypt (`ClientService.create`, `PasswordEncoder` definido no `SecurityConfig`).
 2. `POST /auth` com documento e senha → `AuthService.authenticate`. Documento inexistente, senha errada ou cliente sem senha → `InvalidCredentialsException` → 401, sempre com a mesma mensagem. Cliente inativo → 403.
 3. `AuthService.createToken` emite um JWT HS256 (`sub` = clientId, `exp` = agora + `bcb.security.jwt.ttl`), assinado com `bcb.security.jwt.secret` (`JWT_SECRET`, mín. 32 bytes, checado em `JwtProperties`). Os beans de encoder e decoder ficam em `JwtConfig`. Não há estado no servidor: o token continua valendo depois de um restart, e não há revogação.
-4. O `oauth2ResourceServer` do `SecurityConfig` valida o `Bearer`, põe o `clientId` (`Long`) como principal e responde 401 antes do controller se o token faltar, for inválido ou estiver vencido. As rotas livres ficam só no `SecurityConfig`: `POST /clients`, `POST /auth`, `/actuator/health`, Swagger e `OPTIONS`.
+4. O `oauth2ResourceServer` do `SecurityConfig` valida o `Bearer`, põe o `clientId` (`Long`) como principal e responde 401 antes do controller se o token faltar, for inválido ou estiver vencido. As rotas livres ficam só no `SecurityConfig`: `POST /clients`, `POST /auth`, `/actuator/health` e `/actuator/prometheus` (que só existem na porta de gerência 8081), Swagger e `OPTIONS`.
+   - Rate limit: o `RateLimitFilter` entra na cadeia logo depois do CORS, para o 429 sair com `Access-Control-Allow-Origin`. É um token bucket por IP (Bucket4j, buckets num cache Caffeine): `POST /auth` 10 por minuto, `POST /clients` 10 por hora (`bcb.rate-limit.*`). Estourou: 429 com `Retry-After`, pelo `/error`. Fica desligado no perfil `it`. Não é um bean, para o Boot não o registrar duas vezes como filtro.
 5. Cada cliente só vê os próprios dados: os services filtram pelo principal (conversa/mensagem de outro cliente vira 404; `/clients/{id}` de outro vira 403).
 
 ### Envio de mensagem (`MessageService.sendMessage`, uma transação)
@@ -84,6 +86,17 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 
 ### Erros
 `ApplicationControllerAdvice` converte exceções de negócio em `ErrorResponse` (400 validação/documento, 401, 402, 403, 404, 409). O que não passa por controller (401 de token, rota inexistente) sai pelo `/error` do Spring Boot no mesmo formato JSON (`spring.web.error.include-message=always`).
+
+### Observabilidade
+- Actuator em `management.server.port` (8081), expondo `health` e `prometheus`. No perfil `it` ele fica na porta da aplicação, porque o MockMvc não alcança a porta separada.
+- Métricas próprias:
+  - `MessageMetrics`: `bcb.messages.sent`, contado no `afterCommit` do envio; `bcb.messages.delivery`, timer da criação até `DELIVERED`, registrado no `MessageProcessor`; `bcb.messages.failed`, registrado no `failAndRefund`. Todas por prioridade.
+  - `QueueMetrics` (`MeterBinder`): `bcb.queue.messages`, lido do RabbitMQ a cada coleta.
+  - O `MessageEventStream` também é `MeterBinder`: `bcb.events.connections`.
+- Tracing (Micrometer Tracing + Brave, sem exportador): serve para correlacionar os logs.
+  - `spring.rabbitmq.template/listener.simple.observation-enabled` levam o traceId nos headers da mensagem, então o log "enfileirada" (requisição) e o "entregue" (worker) saem com o mesmo `traceId`.
+  - O `TraceIdHeaderFilter` (ordem `HIGHEST_PRECEDENCE + 2`, antes do Security) devolve o id em `X-Trace-Id`.
+- Logs: texto em dev e nos testes; JSON ECS no compose (`LOGGING_STRUCTURED_FORMAT_CONSOLE=ecs`).
 
 ### Fila (consulta)
 `GET /queue/status` (`QueueStatusService`) conta mensagens por status e prioridade direto no banco (um `GROUP BY status, priority` em `MessageRepository.countByStatusAndPriority`), não no RabbitMQ.
@@ -144,6 +157,8 @@ Tipos da API: `frontend/openapi.json` é o contrato versionado (o `OpenApiContra
 | E2E | `frontend/e2e/*.spec.ts`, Playwright (Chromium) contra o docker-compose | `docker compose up -d --build --wait`, depois `cd frontend && npm run e2e` (na primeira vez, `npx playwright install chromium`) |
 
 Helpers: `support/TestData` (fábricas de clientes pré/pós-pago etc.) e `support/AuthenticatedClient` (põe um `clientId` como principal, como o resource server faz). Nos ITs, `IntegrationTest.login` usa a senha `PASSWORD` dos clientes criados por `createClient`. O JaCoCo exige 80% de linhas nos unitários (`verify` falha abaixo disso). Uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT`.
+
+Dependabot (`.github/dependabot.yml`): PRs semanais de maven, npm, imagens Docker (Dockerfiles e compose) e actions, com minor e patch agrupadas.
 
 CI (`.github/workflows/ci.yml`), em todo PR para a `main`, que é protegida (só entra por PR com os jobs verdes):
 - backend: `mvnw verify`;
