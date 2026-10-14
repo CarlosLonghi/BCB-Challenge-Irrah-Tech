@@ -1,5 +1,13 @@
 package com.carloslonghi.bcb.service;
 
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Limit;
 import com.carloslonghi.bcb.controller.request.MessageRequest;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
@@ -62,12 +70,27 @@ class ConversationServiceTest {
     }
 
     @Test
-    @DisplayName("findAll lista as conversas do cliente autenticado")
+    @DisplayName("findAll lista a página pedida das conversas do cliente, da mais recente para a mais antiga")
     void findAll() {
         Conversation conversation = conversation(7L, client);
-        when(conversationRepository.findByClientIdOrderByLastMessageTimeDesc(1L)).thenReturn(List.of(conversation));
+        Pageable expected = PageRequest.of(2, 20, Sort.by(Sort.Order.desc("lastMessageTime"), Sort.Order.desc("id")));
+        when(conversationRepository.findByClientId(1L, expected)).thenReturn(List.of(conversation));
 
-        assertThat(conversationService.findAll()).containsExactly(conversation);
+        assertThat(conversationService.findAll(2, 20)).containsExactly(conversation);
+    }
+
+    @ParameterizedTest(name = "page={0}, size={1} -> page={2}, size={3}")
+    @CsvSource({"-1, 50, 0, 50", "0, 0, 0, 1", "0, 500, 0, 100"})
+    @DisplayName("findAll ajusta página negativa e tamanho fora de 1..100")
+    void findAllClampsPage(int page, int size, int expectedPage, int expectedSize) {
+        when(conversationRepository.findByClientId(eq(1L), any(Pageable.class))).thenReturn(List.of());
+
+        conversationService.findAll(page, size);
+
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+        verify(conversationRepository).findByClientId(eq(1L), captor.capture());
+        assertThat(captor.getValue().getPageNumber()).isEqualTo(expectedPage);
+        assertThat(captor.getValue().getPageSize()).isEqualTo(expectedSize);
     }
 
     @Test
@@ -115,11 +138,11 @@ class ConversationServiceTest {
     void createsConversation() {
         when(conversationRepository.save(any(Conversation.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        MessageRequest request = new MessageRequest(null, 55, "Maria Souza", "Oi", MessagePriority.NORMAL);
+        MessageRequest request = new MessageRequest(null, 55L, "Maria Souza", "Oi", MessagePriority.NORMAL);
         Conversation created = conversationService.findOrCreate(client, request);
 
         assertThat(created.getClient()).isSameAs(client);
-        assertThat(created.getRecipientId()).isEqualTo(55);
+        assertThat(created.getRecipientId()).isEqualTo(55L);
         assertThat(created.getRecipientName()).isEqualTo("Maria Souza");
         assertThat(created.getLastMessageContent()).isEqualTo("Oi");
         assertThat(created.getLastMessageTime()).isNotNull();
@@ -129,15 +152,15 @@ class ConversationServiceTest {
     static Stream<Arguments> missingRecipient() {
         return Stream.of(
                 Arguments.of(null, "Maria Souza"),
-                Arguments.of(55, null),
-                Arguments.of(55, "   ")
+                Arguments.of(55L, null),
+                Arguments.of(55L, "   ")
         );
     }
 
     @ParameterizedTest(name = "recipientId={0}, recipientName=''{1}''")
     @MethodSource("missingRecipient")
     @DisplayName("findOrCreate sem conversationId exige destinatário completo")
-    void requiresRecipient(Integer recipientId, String recipientName) {
+    void requiresRecipient(Long recipientId, String recipientName) {
         MessageRequest request = new MessageRequest(null, recipientId, recipientName, "Oi", MessagePriority.NORMAL);
 
         assertThatThrownBy(() -> conversationService.findOrCreate(client, request))
@@ -146,14 +169,27 @@ class ConversationServiceTest {
     }
 
     @Test
-    @DisplayName("findMessages lista as mensagens da conversa do cliente")
+    @DisplayName("findMessages sem cursor busca as mais recentes e devolve em ordem crescente")
     void findMessages() {
+        Conversation conversation = conversation(7L, client);
+        Message older = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
+        Message newer = message(2L, conversation, MessagePriority.NORMAL, MessageStatus.QUEUED);
+        when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
+        when(messageRepository.findByConversationIdOrderByIdDesc(7L, Limit.of(50))).thenReturn(List.of(newer, older));
+
+        assertThat(conversationService.findMessages(7L, null, 50)).containsExactly(older, newer);
+    }
+
+    @Test
+    @DisplayName("findMessages com cursor busca as anteriores a ele, com limite ajustado ao teto")
+    void findMessagesBeforeCursor() {
         Conversation conversation = conversation(7L, client);
         Message message = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
         when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
-        when(messageRepository.findByConversationIdOrderByCreatedAtAsc(7L)).thenReturn(List.of(message));
+        when(messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(7L, 40L, Limit.of(100)))
+                .thenReturn(List.of(message));
 
-        assertThat(conversationService.findMessages(7L)).containsExactly(message);
+        assertThat(conversationService.findMessages(7L, 40L, 1000)).containsExactly(message);
     }
 
     @Test
@@ -162,9 +198,9 @@ class ConversationServiceTest {
         Conversation conversation = conversation(7L, prePaidClient(2L, "1.00"));
         when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
 
-        assertThatThrownBy(() -> conversationService.findMessages(7L))
+        assertThatThrownBy(() -> conversationService.findMessages(7L, null, 50))
                 .isInstanceOf(ReferencedEntityNotFoundException.class);
-        verify(messageRepository, never()).findByConversationIdOrderByCreatedAtAsc(any());
+        verifyNoInteractions(messageRepository);
     }
 
     @Test
@@ -172,7 +208,7 @@ class ConversationServiceTest {
     void conversationIdOfOtherClient() {
         Conversation conversation = conversation(7L, prePaidClient(2L, "1.00"));
         when(conversationRepository.findById(7L)).thenReturn(Optional.of(conversation));
-        MessageRequest request = new MessageRequest(7L, 55, "Maria Souza", "Oi", MessagePriority.NORMAL);
+        MessageRequest request = new MessageRequest(7L, 55L, "Maria Souza", "Oi", MessagePriority.NORMAL);
 
         assertThatThrownBy(() -> conversationService.findOrCreate(client, request))
                 .isInstanceOf(ReferencedEntityNotFoundException.class)

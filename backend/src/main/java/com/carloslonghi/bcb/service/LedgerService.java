@@ -5,6 +5,7 @@ import com.carloslonghi.bcb.entity.LedgerEntry;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.LedgerEntryType;
 import com.carloslonghi.bcb.repository.LedgerEntryRepository;
+import com.carloslonghi.bcb.utils.PageLimit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,9 +32,11 @@ public class LedgerService {
         return ledgerEntryRepository.save(entry);
     }
 
-    // Extrato do proprio cliente; outro id vira 403, como no saldo
-    public List<LedgerEntry> findByClient(Long clientId) {
+    // Extrato do proprio cliente, mais recente primeiro; outro id vira 403, como no saldo
+    public List<LedgerEntry> findByClient(Long clientId, Long before, int limit) {
         Client client = clientService.findById(clientId);
-        return ledgerEntryRepository.findByClientId(client.getId());
+        return before == null
+                ? ledgerEntryRepository.findByClientIdOrderByIdDesc(client.getId(), PageLimit.of(limit))
+                : ledgerEntryRepository.findByClientIdAndIdLessThanOrderByIdDesc(client.getId(), before, PageLimit.of(limit));
     }
 }

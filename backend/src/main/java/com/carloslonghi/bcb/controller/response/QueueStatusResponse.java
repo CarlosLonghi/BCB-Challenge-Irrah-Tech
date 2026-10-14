@@ -10,6 +10,8 @@ public record QueueStatusResponse(
         int processing,
         int sent,
         int delivered,
+        @Schema(description = "Mensagens lidas (leitura simulada alguns segundos depois da entrega)")
+        int read,
         int failed
 ) {
 }

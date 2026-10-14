@@ -1,5 +1,9 @@
 package com.carloslonghi.bcb.infra.worker;
 
+import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
+import org.mockito.Spy;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
@@ -35,8 +39,12 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MessageProcessorTest {
 
+    private static final Instant NOW = Instant.parse("2026-10-14T12:00:00Z");
+
     @Mock
     private MessageRepository messageRepository;
+    @Spy
+    private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @InjectMocks
     private MessageProcessor messageProcessor;
@@ -52,7 +60,7 @@ class MessageProcessorTest {
 
     @ParameterizedTest
     @EnumSource(value = MessageStatus.class, names = {"QUEUED", "PROCESSING", "SENT"})
-    @DisplayName("mensagem pendente passa por PROCESSING, SENT e DELIVERED, nessa ordem")
+    @DisplayName("mensagem pendente passa por PROCESSING, SENT e DELIVERED (com a hora da entrega), nessa ordem")
     void processesPendingMessage(MessageStatus status) throws InterruptedException {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(messageWithStatus(status)));
 
@@ -61,7 +69,7 @@ class MessageProcessorTest {
         InOrder inOrder = inOrder(messageRepository);
         inOrder.verify(messageRepository).updateStatus(1L, MessageStatus.PROCESSING);
         inOrder.verify(messageRepository).updateStatus(1L, MessageStatus.SENT);
-        inOrder.verify(messageRepository).updateStatus(1L, MessageStatus.DELIVERED);
+        inOrder.verify(messageRepository).markDelivered(1L, NOW);
     }
 
     @ParameterizedTest
@@ -97,7 +105,7 @@ class MessageProcessorTest {
                 .isInstanceOf(DataAccessResourceFailureException.class);
 
         verify(messageRepository).updateStatus(1L, MessageStatus.PROCESSING);
-        verify(messageRepository, never()).updateStatus(1L, MessageStatus.DELIVERED);
+        verify(messageRepository, never()).markDelivered(anyLong(), any());
     }
 
     @Test
@@ -126,6 +134,6 @@ class MessageProcessorTest {
 
         verify(messageRepository).updateStatus(1L, MessageStatus.PROCESSING);
         verify(messageRepository, never()).updateStatus(1L, MessageStatus.SENT);
-        verify(messageRepository, never()).updateStatus(1L, MessageStatus.DELIVERED);
+        verify(messageRepository, never()).markDelivered(anyLong(), any());
     }
 }

@@ -18,9 +18,10 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Mensagem | `Message` (`tb_messages`) | Texto enviado pelo cliente (`sender`) numa conversa, com custo, prioridade e status. |
 | Prioridade | `MessagePriority` (`NORMAL`, `URGENT`) | Normal custa R$ 0,25; urgente, R$ 0,50 e é processada antes. Na fila vira prioridade AMQP 1 ou 10. |
 | Custo | `Message.cost`, `MessageService.NORMAL_COST` / `URGENT_COST` | Valor cobrado no envio, gravado na mensagem. |
-| Status | `MessageStatus` | Ciclo: `QUEUED` → `PROCESSING` → `SENT` → `DELIVERED`; `FAILED` depois de esgotar as tentativas. `READ` existe no enum (e no frontend) mas nada o atribui. `DELIVERED`, `READ` e `FAILED` são finais. |
-| Pendente | `QUEUED`, `PROCESSING`, `SENT` | Mensagem que ainda não chegou a um status final; o frontend faz polling enquanto houver uma, e o backend reenfileira essas no start. |
-| Não lidas | `Conversation.unreadCount` | Sempre `0`: o sistema só envia, não recebe respostas. |
+| Status | `MessageStatus` | Ciclo: `QUEUED` → `PROCESSING` → `SENT` → `DELIVERED` → `READ`; `FAILED` depois de esgotar as tentativas. `READ` é simulado pelo `ReadSimulator` cerca de 4s depois da entrega (`delivered_at`), até existir recebimento real. Para o worker, `DELIVERED`, `READ` e `FAILED` são finais. |
+| Pendente | `QUEUED`, `PROCESSING`, `SENT` | Mensagem que ainda não chegou a um status final; o backend reenfileira essas no start. O frontend faz polling também em `DELIVERED`, esperando o `READ`. |
+| Não lidas | `Conversation.unreadCount` | Sempre `0` por enquanto: o sistema só envia. Fica no modelo para quando houver troca real de mensagens. |
+| Cursor / página | `before`, `limit`, `page`, `size`; `utils/PageLimit`, `shared/api/pagination.ts` | Paginação das listas: `before` = id exclusivo (mensagens, extrato), `page`/`size` nas conversas. 50 itens por padrão, teto 100. |
 
 ## Técnico
 

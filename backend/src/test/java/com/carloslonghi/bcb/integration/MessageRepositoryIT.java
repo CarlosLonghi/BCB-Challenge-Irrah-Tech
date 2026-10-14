@@ -1,5 +1,7 @@
 package com.carloslonghi.bcb.integration;
 
+import org.springframework.data.domain.Limit;
+import com.carloslonghi.bcb.repository.StatusCount;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
@@ -36,7 +38,7 @@ class MessageRepositoryIT extends IntegrationTest {
 
         Conversation newConversation = new Conversation();
         newConversation.setClient(client);
-        newConversation.setRecipientId(55);
+        newConversation.setRecipientId(55L);
         newConversation.setRecipientName("Maria Souza");
         newConversation.setLastMessageContent("Oi");
         newConversation.setLastMessageTime(Instant.now());
@@ -47,7 +49,7 @@ class MessageRepositoryIT extends IntegrationTest {
         Message message = new Message();
         message.setConversation(conversation);
         message.setSender(conversation.getClient());
-        message.setRecipientId(55);
+        message.setRecipientId(55L);
         message.setContent("Olá");
         message.setPriority(priority);
         message.setStatus(status);
@@ -77,10 +79,10 @@ class MessageRepositoryIT extends IntegrationTest {
         save(MessagePriority.NORMAL, MessageStatus.QUEUED, Instant.now());
         save(MessagePriority.NORMAL, MessageStatus.DELIVERED, Instant.now());
 
-        assertThat(messageRepository.countByStatusAndPriority(MessageStatus.QUEUED, MessagePriority.URGENT)).isEqualTo(1);
-        assertThat(messageRepository.countByStatusAndPriority(MessageStatus.QUEUED, MessagePriority.NORMAL)).isEqualTo(2);
-        assertThat(messageRepository.countByStatus(MessageStatus.DELIVERED)).isEqualTo(1);
-        assertThat(messageRepository.countByStatus(MessageStatus.FAILED)).isZero();
+        assertThat(messageRepository.countByStatusAndPriority()).containsExactlyInAnyOrder(
+                new StatusCount(MessageStatus.QUEUED, MessagePriority.URGENT, 1),
+                new StatusCount(MessageStatus.QUEUED, MessagePriority.NORMAL, 2),
+                new StatusCount(MessageStatus.DELIVERED, MessagePriority.NORMAL, 1));
     }
 
     @Test
@@ -100,14 +102,36 @@ class MessageRepositoryIT extends IntegrationTest {
     }
 
     @Test
-    @DisplayName("mensagens da conversa em ordem cronológica")
-    void conversationMessagesInOrder() {
+    @DisplayName("página da conversa por cursor: mais recentes primeiro, só ids menores que o cursor")
+    void conversationMessagesByCursor() {
         Instant now = Instant.now();
+        Message first = save(MessagePriority.NORMAL, MessageStatus.SENT, now);
         Message second = save(MessagePriority.NORMAL, MessageStatus.SENT, now);
-        Message first = save(MessagePriority.NORMAL, MessageStatus.SENT, now.minusSeconds(5));
+        Message third = save(MessagePriority.NORMAL, MessageStatus.SENT, now);
 
-        assertThat(messageRepository.findByConversationIdOrderByCreatedAtAsc(conversation.getId()))
+        assertThat(messageRepository.findByConversationIdOrderByIdDesc(conversation.getId(), Limit.of(2)))
                 .extracting(Message::getId)
-                .containsExactly(first.getId(), second.getId());
+                .containsExactly(third.getId(), second.getId());
+        assertThat(messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(conversation.getId(), second.getId(), Limit.of(2)))
+                .extracting(Message::getId)
+                .containsExactly(first.getId());
+    }
+
+    @Test
+    @DisplayName("markDelivered grava a entrega e a leitura simulada só pega as entregues até o corte")
+    void deliveredThenRead() {
+        Instant now = Instant.now();
+        Message old = save(MessagePriority.NORMAL, MessageStatus.SENT, now);
+        Message recent = save(MessagePriority.NORMAL, MessageStatus.SENT, now);
+        Message failed = save(MessagePriority.NORMAL, MessageStatus.FAILED, now);
+        messageRepository.markDelivered(old.getId(), now.minusSeconds(10));
+        messageRepository.markDelivered(recent.getId(), now);
+
+        assertThat(messageRepository.markReadDeliveredBefore(now.minusSeconds(5))).isEqualTo(1);
+
+        assertThat(messageRepository.findById(old.getId()).orElseThrow().getStatus()).isEqualTo(MessageStatus.READ);
+        assertThat(messageRepository.findById(recent.getId()).orElseThrow().getStatus()).isEqualTo(MessageStatus.DELIVERED);
+        assertThat(messageRepository.findById(recent.getId()).orElseThrow().getDeliveredAt()).isNotNull();
+        assertThat(messageRepository.findById(failed.getId()).orElseThrow().getStatus()).isEqualTo(MessageStatus.FAILED);
     }
 }

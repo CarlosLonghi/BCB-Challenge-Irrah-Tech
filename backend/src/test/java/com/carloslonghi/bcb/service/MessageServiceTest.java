@@ -1,5 +1,6 @@
 package com.carloslonghi.bcb.service;
 
+import org.springframework.data.domain.Limit;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
 import org.mockito.InOrder;
@@ -260,12 +261,21 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("findAll devolve as mensagens enviadas pelo cliente autenticado")
+    @DisplayName("findAll sem cursor devolve as mensagens mais recentes do cliente autenticado")
     void findAll() {
         Message message = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
-        when(messageRepository.findBySenderId(SENDER_ID)).thenReturn(List.of(message));
+        when(messageRepository.findBySenderIdOrderByIdDesc(SENDER_ID, Limit.of(50))).thenReturn(List.of(message));
 
-        assertThat(messageService.findAll()).containsExactly(message);
+        assertThat(messageService.findAll(null, 50)).containsExactly(message);
+    }
+
+    @Test
+    @DisplayName("findAll com cursor busca as anteriores a ele, com limite mínimo 1")
+    void findAllBeforeCursor() {
+        Message message = message(1L, conversation, MessagePriority.NORMAL, MessageStatus.SENT);
+        when(messageRepository.findBySenderIdAndIdLessThanOrderByIdDesc(SENDER_ID, 9L, Limit.of(1))).thenReturn(List.of(message));
+
+        assertThat(messageService.findAll(9L, 0)).containsExactly(message);
     }
 
     @Test

@@ -1,8 +1,11 @@
+import { PAGE_SIZE } from '@/shared/api/pagination';
 import { request } from '@/shared/api/http';
 import type { Message, SendMessageRequest, SendMessageResponse } from '@/shared/api/types';
 
-export function listMessages(conversationId: number) {
-  return request<Message[]>(`/conversations/${conversationId}/messages`);
+/** As PAGE_SIZE mensagens mais recentes (ou as anteriores a `before`), em ordem crescente. */
+export function listMessages(conversationId: number, before?: number) {
+  const cursor = before === undefined ? '' : `&before=${before}`;
+  return request<Message[]>(`/conversations/${conversationId}/messages?limit=${PAGE_SIZE}${cursor}`);
 }
 
 export function sendMessage(message: SendMessageRequest) {

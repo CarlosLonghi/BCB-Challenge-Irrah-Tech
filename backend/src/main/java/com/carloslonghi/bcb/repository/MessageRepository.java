@@ -2,7 +2,7 @@ package com.carloslonghi.bcb.repository;
 
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
-import com.carloslonghi.bcb.entity.enums.MessagePriority;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,11 +16,17 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Long> {
-    List<Message> findBySenderId(Long senderId);
-    List<Message> findByConversationIdOrderByCreatedAtAsc(Long conversationId);
+    // Paginas por cursor (id), mais recentes primeiro; o cursor "before" e exclusivo
+    List<Message> findBySenderIdOrderByIdDesc(Long senderId, Limit limit);
+    List<Message> findBySenderIdAndIdLessThanOrderByIdDesc(Long senderId, Long before, Limit limit);
+    List<Message> findByConversationIdOrderByIdDesc(Long conversationId, Limit limit);
+    List<Message> findByConversationIdAndIdLessThanOrderByIdDesc(Long conversationId, Long before, Limit limit);
+
     List<Message> findByStatusInOrderByCreatedAtAsc(List<MessageStatus> statuses);
-    int countByStatus(MessageStatus status);
-    int countByStatusAndPriority(MessageStatus status, MessagePriority priority);
+
+    @Query("select new com.carloslonghi.bcb.repository.StatusCount(m.status, m.priority, count(m)) "
+            + "from Message m group by m.status, m.priority")
+    List<StatusCount> countByStatusAndPriority();
 
     // Atualiza so a coluna status, sem sobrescrever o resto da linha com uma copia antiga da entidade
     @Transactional
@@ -33,6 +39,18 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Modifying
     @Query("update Message m set m.status = :to where m.id = :id and m.status in :from")
     int updateStatusIfIn(Long id, Collection<MessageStatus> from, MessageStatus to);
+
+    @Transactional
+    @Modifying
+    @Query("update Message m set m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED, m.deliveredAt = :at where m.id = :id")
+    void markDelivered(Long id, Instant at);
+
+    // Leitura simulada: todas as DELIVERED entregues ate "cutoff" viram READ de uma vez
+    @Transactional
+    @Modifying
+    @Query("update Message m set m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.READ "
+            + "where m.status = com.carloslonghi.bcb.entity.enums.MessageStatus.DELIVERED and m.deliveredAt <= :cutoff")
+    int markReadDeliveredBefore(Instant cutoff);
 
     // Volta para QUEUED como "nao publicada": se a publicacao seguinte falhar, a rotina periodica a encontra
     @Transactional

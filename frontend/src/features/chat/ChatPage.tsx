@@ -52,6 +52,10 @@ function Chat({ conversationId }: { conversationId: number }) {
         isPending={messages.isPending}
         error={messages.error}
         onRetry={messages.reload}
+        hasOlder={messages.hasOlder}
+        onLoadOlder={messages.loadOlder}
+        isLoadingOlder={messages.isLoadingOlder}
+        olderError={messages.olderError}
       />
 
       <div className={styles.footer}>

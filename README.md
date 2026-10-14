@@ -132,7 +132,7 @@ docker-compose.yaml
 | Cadastro e consulta de clientes, saldo/limite | ✅ |
 | Conversas e histórico de mensagens | ✅ |
 | Envio com custo (normal R$ 0,25 / urgente R$ 0,50) e débito de saldo/limite | ✅ |
-| Fila com prioridade (urgente antes de normal, FIFO) e ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED | ✅ |
+| Fila com prioridade (urgente antes de normal, FIFO) e ciclo QUEUED -> PROCESSING -> SENT -> DELIVERED -> READ (leitura simulada) | ✅ |
 | Fila em RabbitMQ com prioridade, DLQ e reprocessamento | ✅ |
 | Frontend: login, cadastro de cliente, conversas, nova conversa, chat, saldo/limite no cabeçalho | ✅ |
 | Frontend: layout responsivo | ✅ |
@@ -144,7 +144,9 @@ docker-compose.yaml
 - O login é feito com documento (CPF/CNPJ) e senha. O enunciado não pedia senha: ela entrou depois da entrega. Clientes cadastrados antes disso ficam sem senha e não conseguem entrar.
 - A sessão é um JWT (HS256) que vale 8 horas e continua valendo depois de um restart do backend. O segredo vem de `JWT_SECRET`, com pelo menos 32 bytes; o perfil `dev` e o docker-compose têm um valor de desenvolvimento.
 - O envio é simulado pelo worker (cada mensagem leva cerca de 8 s até `DELIVERED`).
-- A atualização de status na tela é feita por polling (a cada 3 s, só enquanto há mensagem pendente); não há WebSocket.
+- A leitura é simulada: cerca de 4 s depois da entrega a mensagem vira `READ`. Isso vale até existir recebimento real de mensagens.
+- A atualização de status na tela é feita por polling (a cada 3 s, só da página mais recente e só enquanto alguma mensagem ainda vai mudar); não há WebSocket.
+- As listas são paginadas: o chat mostra as 50 mensagens mais recentes com "Carregar anteriores" (cursor `before`), e a barra lateral mostra 50 conversas com "Carregar mais" (`page`/`size`).
 - Para iniciar uma conversa, o contrato exige `recipientId` e `recipientName`. Não há cadastro de destinatários: o backend só armazena o id, e cada envio sem `conversationId` cria uma conversa nova.
 
 ## Decisões técnicas e limitações
@@ -158,7 +160,8 @@ docker-compose.yaml
 - **Autenticação e erros:** a senha é guardada como hash BCrypt. O `POST /auth` emite um JWT com o id do cliente no `sub`, e o resource server do Spring Security valida a assinatura e a expiração em toda rota protegida, respondendo `401` antes do controller. Documento inexistente e senha errada dão a mesma mensagem, para não revelar quais documentos estão cadastrados. Erros de negócio viram status HTTP no `ApplicationControllerAdvice`; os que não passam por controller (401 de token, rota inexistente) saem pelo `/error` do Spring Boot, no mesmo formato JSON.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.
-- **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema só envia mensagens e não recebe respostas.
+- **Sem badge de não lidas:** `unreadCount` é sempre `0`, porque o sistema ainda só envia mensagens. Fica no modelo para a troca real de mensagens.
+- **Desempenho:** `@ManyToOne` LAZY com open-in-view desligado (sem N+1 nas listas, verificado em teste), índices para as consultas paginadas e `GET /queue/status` numa consulta `GROUP BY` só.
 - **Visual:** IBM Plex Sans/Mono (números sempre em mono), barra azul-marinho, fundo cinza-papel, um único verde para ações; tokens em `frontend/src/styles/global.css`.
 - **Schema:** versionado com Flyway (`backend/src/main/resources/db/migrations`); o Hibernate só valida (`ddl-auto=validate`).
 - **Sessões:** o JWT expira em 8 horas (`bcb.security.jwt.ttl`). Não há refresh token nem revogação no servidor; o logout apaga a sessão do navegador.

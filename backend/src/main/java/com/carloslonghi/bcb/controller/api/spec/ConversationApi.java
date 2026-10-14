@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -21,7 +22,7 @@ import java.util.List;
 public interface ConversationApi {
     @Operation(
             summary = "Listar Conversas",
-            description = "Retorna todas as conversas do cliente autenticado"
+            description = "Conversas do cliente autenticado, da última mensagem mais recente para a mais antiga, paginadas por page/size"
     )
     @ApiResponses({
             @ApiResponse(
@@ -40,7 +41,10 @@ public interface ConversationApi {
                     content = @Content
             )
     })
-    ResponseEntity<List<ConversationResponse>> findAll();
+    ResponseEntity<List<ConversationResponse>> findAll(
+            @Parameter(description = "Página, começando em 0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Conversas por página: padrão 50, ajustado para 1..100") @RequestParam(defaultValue = "50") int size
+    );
 
     @Operation(
             summary = "Obter Conversa por ID",
@@ -72,7 +76,7 @@ public interface ConversationApi {
 
     @Operation(
             summary = "Listar Mensagens da Conversa",
-            description = "Retorna as mensagens de uma conversa"
+            description = "As mensagens mais recentes da conversa (ou as anteriores ao cursor), em ordem crescente de envio"
     )
     @ApiResponses({
             @ApiResponse(
@@ -97,6 +101,8 @@ public interface ConversationApi {
             )
     })
     ResponseEntity<List<MessageResponse>> findMessagesByConversationId(
-            @Parameter(description = "ID da conversa", required = true) @PathVariable Long id
+            @Parameter(description = "ID da conversa", required = true) @PathVariable Long id,
+            @Parameter(description = "Cursor: só itens com id menor que este; omitir para começar dos mais recentes") @RequestParam(required = false) Long before,
+            @Parameter(description = "Itens por página: padrão 50, ajustado para 1..100") @RequestParam(defaultValue = "50") int limit
     );
 }

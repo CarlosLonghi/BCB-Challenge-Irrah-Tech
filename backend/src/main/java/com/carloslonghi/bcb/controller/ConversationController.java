@@ -8,9 +8,11 @@ import com.carloslonghi.bcb.mapper.MessageMapper;
 import com.carloslonghi.bcb.service.ConversationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.carloslonghi.bcb.utils.PageLimit;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -25,8 +27,9 @@ public class ConversationController implements ConversationApi {
     private final MessageMapper messageMapper;
 
     @GetMapping
-    public ResponseEntity<List<ConversationResponse>> findAll() {
-        List<ConversationResponse> conversations = conversationService.findAll().stream()
+    public ResponseEntity<List<ConversationResponse>> findAll(@RequestParam(defaultValue = "0") int page,
+                                                              @RequestParam(defaultValue = "" + PageLimit.DEFAULT) int size) {
+        List<ConversationResponse> conversations = conversationService.findAll(page, size).stream()
                 .map(conversationMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(conversations);
@@ -38,8 +41,10 @@ public class ConversationController implements ConversationApi {
     }
 
     @GetMapping("/{id}/messages")
-    public ResponseEntity<List<MessageResponse>> findMessagesByConversationId(@PathVariable Long id) {
-        List<MessageResponse> messages = conversationService.findMessages(id).stream()
+    public ResponseEntity<List<MessageResponse>> findMessagesByConversationId(@PathVariable Long id,
+                                                                              @RequestParam(required = false) Long before,
+                                                                              @RequestParam(defaultValue = "" + PageLimit.DEFAULT) int limit) {
+        List<MessageResponse> messages = conversationService.findMessages(id, before, limit).stream()
                 .map(messageMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(messages);

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef } from 'react';
+import { Fragment, useLayoutEffect, useRef } from 'react';
 import type { Message } from '@/shared/api/types';
 import { ErrorMessage } from '@/shared/components/ErrorMessage';
 import { Loading } from '@/shared/components/Loading';
@@ -11,20 +11,44 @@ interface Props {
   isPending: boolean;
   error: Error | null;
   onRetry: () => void;
+  hasOlder: boolean;
+  onLoadOlder: () => void;
+  isLoadingOlder: boolean;
+  olderError: Error | null;
 }
 
-/** Histórico da conversa, com carregando/erro/vazio e rolagem até a última mensagem. */
-export function MessageList({ messages, isPending, error, onRetry }: Props) {
+/** Histórico da conversa, com carregando/erro/vazio, "carregar anteriores" e rolagem até a última mensagem. */
+export function MessageList({
+  messages,
+  isPending,
+  error,
+  onRetry,
+  hasOlder,
+  onLoadOlder,
+  isLoadingOlder,
+  olderError,
+}: Props) {
   const listRef = useRef<HTMLOListElement>(null);
+  const previous = useRef<{ firstId?: number; lastId?: number; scrollHeight: number }>({ scrollHeight: 0 });
 
-  // Rola até o fim quando chega mensagem nova (depende só do tamanho, não do array inteiro,
-  // para não rolar a cada polling que só muda status).
   const count = messages?.length ?? 0;
-  // Rola só a lista: scrollIntoView também rolaria a página e os outros ancestrais.
-  useEffect(() => {
+  const firstId = messages?.[0]?.id;
+  const lastId = messages?.[count - 1]?.id;
+
+  // Antes de pintar a tela, para não piscar. Rola só a lista (scrollIntoView rolaria a página também):
+  // - mensagem nova no fim: vai até a última;
+  // - mensagens antigas no topo ("carregar anteriores"): mantém na tela o que o usuário estava lendo;
+  // - polling que só muda status: não mexe na rolagem.
+  useLayoutEffect(() => {
     const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
-  }, [count]);
+    if (!list) return;
+    if (lastId !== previous.current.lastId) {
+      list.scrollTop = list.scrollHeight;
+    } else if (firstId !== previous.current.firstId) {
+      list.scrollTop += list.scrollHeight - previous.current.scrollHeight;
+    }
+    previous.current = { firstId, lastId, scrollHeight: list.scrollHeight };
+  }, [firstId, lastId]);
 
   return (
     <ol ref={listRef} className={styles.list}>
@@ -37,6 +61,14 @@ export function MessageList({ messages, isPending, error, onRetry }: Props) {
       {error ? (
         <li>
           <ErrorMessage error={error} onRetry={onRetry} />
+        </li>
+      ) : null}
+      {hasOlder ? (
+        <li className={styles.older}>
+          <ErrorMessage error={olderError} />
+          <button type="button" className="button button--ghost button--small" onClick={onLoadOlder} disabled={isLoadingOlder}>
+            {isLoadingOlder ? 'Carregando...' : 'Carregar anteriores'}
+          </button>
         </li>
       ) : null}
       {count === 0 && !isPending && !error ? <li className={styles.info}>Nenhuma mensagem nesta conversa.</li> : null}

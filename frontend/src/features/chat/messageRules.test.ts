@@ -11,13 +11,15 @@ function message(status: MessageStatus): Message {
 
 describe('hasPendingMessages', () => {
   it('continua o polling enquanto há mensagem que ainda vai mudar de status', () => {
-    expect(hasPendingMessages([message('DELIVERED'), message('QUEUED')])).toBe(true);
+    expect(hasPendingMessages([message('READ'), message('QUEUED')])).toBe(true);
     expect(hasPendingMessages([message('PROCESSING')])).toBe(true);
     expect(hasPendingMessages([message('SENT')])).toBe(true);
+    // A leitura simulada chega alguns segundos depois da entrega
+    expect(hasPendingMessages([message('DELIVERED')])).toBe(true);
   });
 
   it('para quando todas estão em estado final', () => {
-    expect(hasPendingMessages([message('DELIVERED'), message('FAILED'), message('READ')])).toBe(false);
+    expect(hasPendingMessages([message('FAILED'), message('READ')])).toBe(false);
     expect(hasPendingMessages([])).toBe(false);
     expect(hasPendingMessages(undefined)).toBe(false);
   });

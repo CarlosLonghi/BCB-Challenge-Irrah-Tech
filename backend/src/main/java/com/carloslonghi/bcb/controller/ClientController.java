@@ -15,6 +15,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.carloslonghi.bcb.utils.PageLimit;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,8 +61,10 @@ public class ClientController implements ClientApi {
     }
 
     @GetMapping("/clients/{id}/ledger")
-    public ResponseEntity<List<LedgerEntryResponse>> getLedger(@PathVariable Long id) {
-        List<LedgerEntryResponse> entries = ledgerService.findByClient(id).stream()
+    public ResponseEntity<List<LedgerEntryResponse>> getLedger(@PathVariable Long id,
+                                                               @RequestParam(required = false) Long before,
+                                                               @RequestParam(defaultValue = "" + PageLimit.DEFAULT) int limit) {
+        List<LedgerEntryResponse> entries = ledgerService.findByClient(id, before, limit).stream()
                 .map(ledgerEntryMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(entries);

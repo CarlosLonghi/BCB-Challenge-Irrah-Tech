@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
@@ -86,7 +87,7 @@ public interface MessageApi {
 
     @Operation(
             summary = "Listar Mensagens",
-            description = "Lista mensagens do usuário autenticado"
+            description = "Mensagens do cliente autenticado, da mais recente para a mais antiga, paginadas por cursor"
     )
     @ApiResponses({
             @ApiResponse(
@@ -105,7 +106,10 @@ public interface MessageApi {
                     content = @Content
             )
     })
-    ResponseEntity<List<MessageResponse>> findAll();
+    ResponseEntity<List<MessageResponse>> findAll(
+            @Parameter(description = "Cursor: só itens com id menor que este; omitir para começar dos mais recentes") @RequestParam(required = false) Long before,
+            @Parameter(description = "Itens por página: padrão 50, ajustado para 1..100") @RequestParam(defaultValue = "50") int limit
+    );
 
     @Operation(
             summary = "Buscar Mensagem por ID",
