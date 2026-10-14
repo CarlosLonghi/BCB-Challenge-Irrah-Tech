@@ -30,8 +30,8 @@ class SecurityIT extends IntegrationTest {
     @Test
     @DisplayName("header com 'bearer' minúsculo não é aceito")
     void lowercaseBearer() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         mockMvc.perform(get("/messages").header("Authorization", "bearer " + token))
                 .andExpect(status().isUnauthorized());
@@ -40,9 +40,9 @@ class SecurityIT extends IntegrationTest {
     @Test
     @DisplayName("token válido acessa as rotas protegidas e só vê o próprio cliente")
     void validToken() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         createPrePaidClient("98765432100", "10.00");
-        String token = login("12345678901");
+        String token = login("12345678909");
 
         mockMvc.perform(withToken(get("/clients"), token))
                 .andExpect(status().isOk())
@@ -68,9 +68,9 @@ class SecurityIT extends IntegrationTest {
     @Test
     @DisplayName("login de cliente inativo responde 403")
     void inactiveClient() throws Exception {
-        createClient("12345678901", "PRE_PAID", "10.00", "0.00", false);
+        createClient("12345678909", "PRE_PAID", "10.00", "0.00", false);
 
-        mockMvc.perform(post("/auth").contentType(MediaType.APPLICATION_JSON).content("{\"document\": \"12345678901\"}"))
+        mockMvc.perform(post("/auth").contentType(MediaType.APPLICATION_JSON).content("{\"document\": \"12345678909\"}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Cliente inativo."));
     }

@@ -47,8 +47,8 @@ class DeadLetterIT extends IntegrationTest {
     @Test
     @DisplayName("falha em todas as tentativas de processar marca a mensagem como FAILED e manda para a DLQ")
     void processingFailureMarksFailed() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
         // A mensagem enviada a seguir tera id 1 (TRUNCATE ... RESTART IDENTITY)
         doThrow(new DataAccessResourceFailureException("falha no worker"))
                 .when(messageRepository).updateStatus(eq(1L), eq(MessageStatus.PROCESSING));

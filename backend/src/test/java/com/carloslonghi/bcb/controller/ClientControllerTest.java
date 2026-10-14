@@ -49,14 +49,14 @@ class ClientControllerTest {
     @BeforeEach
     void setUp() {
         client = prePaidClient(1L, "10.00");
-        clientResponse = new ClientResponse(1L, "Cliente 1", "12345678901", ClientDocumentType.CPF,
+        clientResponse = new ClientResponse(1L, "Cliente 1", "12345678909", ClientDocumentType.CPF,
                 ClientPlanType.PRE_PAID, new BigDecimal("10.00"), BigDecimal.ZERO, true);
     }
 
     @Test
     @DisplayName("create devolve 201 com o cliente cadastrado")
     void create() {
-        ClientRequest request = new ClientRequest("Cliente 1", "12345678901", ClientDocumentType.CPF,
+        ClientRequest request = new ClientRequest("Cliente 1", "12345678909", ClientDocumentType.CPF,
                 ClientPlanType.PRE_PAID, new BigDecimal("10.00"), BigDecimal.ZERO, true);
         when(clientMapper.toEntity(request)).thenReturn(client);
         when(clientService.create(client)).thenReturn(client);
@@ -120,10 +120,10 @@ class ClientControllerTest {
     @Test
     @DisplayName("create com documento duplicado propaga o erro sem montar resposta")
     void createDuplicated() {
-        ClientRequest request = new ClientRequest("Cliente 1", "12345678901", ClientDocumentType.CPF,
+        ClientRequest request = new ClientRequest("Cliente 1", "12345678909", ClientDocumentType.CPF,
                 ClientPlanType.PRE_PAID, new BigDecimal("10.00"), BigDecimal.ZERO, true);
         when(clientMapper.toEntity(request)).thenReturn(client);
-        when(clientService.create(client)).thenThrow(new DocumentAlreadyExistsException("12345678901"));
+        when(clientService.create(client)).thenThrow(new DocumentAlreadyExistsException("12345678909"));
 
         assertThatThrownBy(() -> controller.create(request))
                 .isInstanceOf(DocumentAlreadyExistsException.class);

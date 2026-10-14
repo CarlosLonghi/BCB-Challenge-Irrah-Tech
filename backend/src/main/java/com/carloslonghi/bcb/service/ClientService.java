@@ -10,6 +10,7 @@ import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.enums.ClientDocumentType;
 import com.carloslonghi.bcb.entity.enums.ClientPlanType;
 import com.carloslonghi.bcb.repository.ClientRepository;
+import com.carloslonghi.bcb.utils.DocumentValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -85,6 +86,9 @@ public class ClientService {
         int expectedLength = client.getDocumentType() == ClientDocumentType.CPF ? 11 : 14;
         if (client.getDocument().length() != expectedLength) {
             throw new InvalidDocumentException(client.getDocumentType().name(), expectedLength);
+        }
+        if (!DocumentValidator.isValid(client.getDocumentType(), client.getDocument())) {
+            throw new InvalidDocumentException(client.getDocumentType().name());
         }
     }
 }

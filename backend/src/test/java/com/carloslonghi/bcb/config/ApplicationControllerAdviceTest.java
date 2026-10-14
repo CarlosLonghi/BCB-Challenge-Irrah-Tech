@@ -63,8 +63,8 @@ class ApplicationControllerAdviceTest {
     void otherBusinessErrors() {
         assertError(advice.handleReferencedEntityNotFoundException(new ReferencedEntityNotFoundException("Conversa", 7L), request),
                 HttpStatus.NOT_FOUND, "Conversa de id 7 não encontrado(a).");
-        assertError(advice.handleDocumentAlreadyExistsException(new DocumentAlreadyExistsException("12345678901"), request),
-                HttpStatus.CONFLICT, "Já existe cliente com o documento 12345678901.");
+        assertError(advice.handleDocumentAlreadyExistsException(new DocumentAlreadyExistsException("12345678909"), request),
+                HttpStatus.CONFLICT, "Já existe cliente com o documento 12345678909.");
         assertError(advice.handleInvalidDocumentException(new InvalidDocumentException("CNPJ", 14), request),
                 HttpStatus.BAD_REQUEST, "CNPJ deve ter 14 dígitos.");
         assertError(advice.handleMissingRecipientException(new MissingRecipientException(), request),

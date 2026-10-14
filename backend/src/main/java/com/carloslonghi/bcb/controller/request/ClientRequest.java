@@ -17,7 +17,7 @@ public record ClientRequest(
         @Size(max = 150, message = "Nome deve ter no máximo 150 caracteres")
         String name,
 
-        @Schema(description = "CPF (11 dígitos) ou CNPJ (14 dígitos), só números; deve combinar com documentType", example = "12345678901")
+        @Schema(description = "CPF (11 dígitos) ou CNPJ (14 dígitos), só números; deve combinar com documentType", example = "12345678909")
         @NotBlank(message = "Documento é obrigatório")
         @Pattern(regexp = "\\d{11}|\\d{14}", message = "Documento deve ter 11 (CPF) ou 14 (CNPJ) dígitos, só números")
         String document,

@@ -30,8 +30,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("pré-pago: NORMAL custa 0,25 e URGENT 0,50, e o worker entrega a mensagem")
     void prePaidSendIsChargedAndDelivered() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         String first = send(token, messageJson(null, 55, "Maria Souza", "NORMAL"), 201);
         assertThat(JsonPath.parse(first).read("$.cost", Double.class)).isEqualTo(0.25);
@@ -53,8 +53,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("pré-pago sem saldo: 402, saldo intacto e nenhuma mensagem gravada")
     void prePaidWithoutBalance() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "0.40");
-        String token = login("12345678901");
+        Long clientId = createPrePaidClient("12345678909", "0.40");
+        String token = login("12345678909");
 
         String body = send(token, messageJson(null, 55, "Maria Souza", "URGENT"), 402);
 
@@ -67,8 +67,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("pós-pago: consome o limite e, quando acaba, responde 402")
     void postPaidConsumesLimit() throws Exception {
-        Long clientId = createPostPaidClient("12345678000199", "0.50");
-        String token = login("12345678000199");
+        Long clientId = createPostPaidClient("11222333000181", "0.50");
+        String token = login("11222333000181");
 
         String first = send(token, messageJson(null, 55, "Maria Souza", "URGENT"), 201);
         assertThat(JsonPath.parse(first).read("$.currentBalance", Double.class)).isEqualTo(0.0);
@@ -83,8 +83,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("conversa nova sem destinatário responde 400 sem cobrar")
     void missingRecipient() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         send(token, messageJson(null, null, null, "NORMAL"), 400);
 
@@ -94,8 +94,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("mensagem sem conteúdo ou prioridade responde 400")
     void invalidMessage() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         String body = send(token, "{\"recipientId\": 55, \"recipientName\": \"Maria\", \"content\": \"\"}", 400);
 
@@ -106,9 +106,9 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("conversa e mensagem de outro cliente contam como inexistentes (404), sem cobrar")
     void otherClientResources() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
+        createPrePaidClient("12345678909", "10.00");
         Long otherId = createPrePaidClient("98765432100", "10.00");
-        String token = login("12345678901");
+        String token = login("12345678909");
         String otherToken = login("98765432100");
 
         String otherMessage = send(otherToken, messageJson(null, 55, "Maria Souza", "NORMAL"), 201);
@@ -129,8 +129,8 @@ class MessageFlowIT extends IntegrationTest {
     @Test
     @DisplayName("conversas e status da fila refletem as mensagens enviadas")
     void conversationsAndQueueStatus() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         String sent = send(token, messageJson(null, 55, "Maria Souza", "URGENT"), 201);
         Long conversationId = JsonPath.parse(sent).read("$.conversationId", Long.class);

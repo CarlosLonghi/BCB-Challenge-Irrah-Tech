@@ -23,7 +23,7 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("cadastro responde 201 e grava o cliente")
     void create() throws Exception {
-        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678901", "CPF", "10.00")))
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678909", "CPF", "10.00")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.balance").value(10.00))
@@ -35,27 +35,36 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("documento já cadastrado responde 409")
     void duplicatedDocument() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
+        createPrePaidClient("12345678909", "10.00");
 
-        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678901", "CPF", "1.00")))
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678909", "CPF", "1.00")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Já existe cliente com o documento 12345678901."));
+                .andExpect(jsonPath("$.message").value("Já existe cliente com o documento 12345678909."));
         assertThat(count("tb_clients")).isEqualTo(1);
     }
 
     @Test
     @DisplayName("CPF com 14 dígitos responde 400")
     void documentDoesNotMatchType() throws Exception {
-        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678000199", "CPF", "1.00")))
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("11222333000181", "CPF", "1.00")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("CPF deve ter 11 dígitos."));
+    }
+
+    @Test
+    @DisplayName("CPF com dígito verificador inválido responde 400 e não grava")
+    void invalidCheckDigit() throws Exception {
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678901", "CPF", "1.00")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("CPF inválido."));
+        assertThat(count("tb_clients")).isZero();
     }
 
     @Test
     @DisplayName("payload inválido responde 400 com as mensagens de todos os campos")
     void invalidPayload() throws Exception {
         String body = """
-                {"name": "", "document": "12345678901", "documentType": "CPF", "planType": "PRE_PAID",
+                {"name": "", "document": "12345678909", "documentType": "CPF", "planType": "PRE_PAID",
                  "balance": -1, "limit": 0}
                 """;
 
@@ -68,7 +77,7 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("enum desconhecido no JSON responde 400")
     void unknownEnum() throws Exception {
-        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678901", "RG", "1.00")))
+        mockMvc.perform(post("/clients").contentType(MediaType.APPLICATION_JSON).content(clientJson("12345678909", "RG", "1.00")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Corpo da requisição inválido. Confira o JSON e os valores dos campos."));
     }
@@ -76,9 +85,9 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("consultar, alterar ou ver o saldo de outro cliente responde 403")
     void otherClientForbidden() throws Exception {
-        createPrePaidClient("12345678901", "10.00");
+        createPrePaidClient("12345678909", "10.00");
         Long otherId = createPrePaidClient("98765432100", "10.00");
-        String token = login("12345678901");
+        String token = login("12345678909");
 
         mockMvc.perform(withToken(get("/clients/" + otherId), token)).andExpect(status().isForbidden());
         mockMvc.perform(withToken(get("/clients/" + otherId + "/balance"), token)).andExpect(status().isForbidden());
@@ -93,8 +102,8 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("PUT altera só o nome, mesmo com saldo, limite e plano no JSON")
     void updateChangesOnlyName() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
-        String token = login("12345678901");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
+        String token = login("12345678909");
 
         mockMvc.perform(withToken(put("/clients/" + clientId), token).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\": \"Novo Nome\", \"balance\": 9999, \"limit\": 9999, \"planType\": \"POST_PAID\"}"))
@@ -110,8 +119,8 @@ class ClientIT extends IntegrationTest {
     @Test
     @DisplayName("GET /balance devolve saldo e limite do próprio cliente")
     void ownBalance() throws Exception {
-        Long clientId = createPostPaidClient("12345678901", "50.00");
-        String token = login("12345678901");
+        Long clientId = createPostPaidClient("12345678909", "50.00");
+        String token = login("12345678909");
 
         mockMvc.perform(withToken(get("/clients/" + clientId + "/balance"), token))
                 .andExpect(status().isOk())

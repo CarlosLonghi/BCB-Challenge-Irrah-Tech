@@ -42,11 +42,11 @@ class AuthControllerTest {
     void authenticate() {
         Client client = prePaidClient(1L, "10.00");
         ClientResponse clientResponse = mock(ClientResponse.class);
-        when(authService.authenticate("12345678901")).thenReturn(client);
+        when(authService.authenticate("12345678909")).thenReturn(client);
         when(authService.createToken(1L)).thenReturn("token-123");
         when(clientMapper.toResponse(client)).thenReturn(clientResponse);
 
-        ResponseEntity<AuthResponse> response = controller.authenticate(new AuthRequest("12345678901"));
+        ResponseEntity<AuthResponse> response = controller.authenticate(new AuthRequest("12345678909"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(new AuthResponse("token-123", clientResponse));

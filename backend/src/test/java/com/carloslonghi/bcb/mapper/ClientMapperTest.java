@@ -22,14 +22,14 @@ class ClientMapperTest {
     @Test
     @DisplayName("toEntity copia os dados do cadastro, sem id")
     void toEntity() {
-        ClientRequest request = new ClientRequest("Ana", "12345678000199", ClientDocumentType.CNPJ,
+        ClientRequest request = new ClientRequest("Ana", "11222333000181", ClientDocumentType.CNPJ,
                 ClientPlanType.POST_PAID, BigDecimal.ZERO, new BigDecimal("50.00"), true);
 
         Client client = mapper.toEntity(request);
 
         assertThat(client.getId()).isNull();
         assertThat(client.getName()).isEqualTo("Ana");
-        assertThat(client.getDocument()).isEqualTo("12345678000199");
+        assertThat(client.getDocument()).isEqualTo("11222333000181");
         assertThat(client.getDocumentType()).isEqualTo(ClientDocumentType.CNPJ);
         assertThat(client.getPlanType()).isEqualTo(ClientPlanType.POST_PAID);
         assertThat(client.getLimit()).isEqualByComparingTo("50.00");

@@ -33,7 +33,7 @@ class MessageTransactionIT extends IntegrationTest {
     @Test
     @DisplayName("falha ao salvar a mensagem depois do débito desfaz o débito e a conversa nova")
     void failureAfterDebitRollsBack() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         AuthenticatedClient.login(clientId);
         doThrow(new DataAccessResourceFailureException("banco caiu no meio do envio"))
                 .when(messageRepository).save(any(Message.class));
@@ -51,7 +51,7 @@ class MessageTransactionIT extends IntegrationTest {
     @Test
     @DisplayName("envio com sucesso grava débito, mensagem e conversa, e só então enfileira")
     void successCommitsEverything() throws Exception {
-        Long clientId = createPrePaidClient("12345678901", "10.00");
+        Long clientId = createPrePaidClient("12345678909", "10.00");
         AuthenticatedClient.login(clientId);
 
         Message message = messageService.sendMessage(
