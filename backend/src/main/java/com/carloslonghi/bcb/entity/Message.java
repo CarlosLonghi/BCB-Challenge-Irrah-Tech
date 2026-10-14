@@ -47,4 +47,8 @@ public class Message {
 
     @Column(nullable = false)
     private BigDecimal cost;
+
+    // Quando foi publicada no RabbitMQ; nulo enquanto a publicacao nao deu certo
+    @Column(name = "enqueued_at")
+    private Instant enqueuedAt;
 }

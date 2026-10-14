@@ -1,9 +1,19 @@
 package com.carloslonghi.bcb.service;
 
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.inOrder;
+import org.mockito.InOrder;
+import org.junit.jupiter.api.Nested;
+import java.util.Set;
+import java.util.Collection;
+import java.time.ZoneOffset;
+import java.time.Instant;
+import java.time.Clock;
 import com.carloslonghi.bcb.controller.request.MessageRequest;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.entity.Conversation;
 import com.carloslonghi.bcb.entity.Message;
+import com.carloslonghi.bcb.entity.enums.LedgerEntryType;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.exception.CreditLimitExceededException;
@@ -25,6 +35,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -53,6 +64,7 @@ import static org.mockito.Mockito.when;
 class MessageServiceTest {
 
     private static final Long SENDER_ID = 1L;
+    private static final Instant NOW = Instant.parse("2026-10-14T12:00:00Z");
 
     @Mock
     private MessageRepository messageRepository;
@@ -66,6 +78,10 @@ class MessageServiceTest {
     private ConversationService conversationService;
     @Mock
     private MessageQueue messageQueue;
+    @Mock
+    private LedgerService ledgerService;
+    @Spy
+    private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
 
     @InjectMocks
     private MessageService messageService;
@@ -121,6 +137,8 @@ class MessageServiceTest {
 
         verify(clientService).debit(eq(sender), argThat(cost -> cost.compareTo(expectedCost) == 0));
         assertThat(message.getCost()).isEqualByComparingTo(expectedCost);
+        verify(ledgerService).record(eq(sender), eq(message), eq(LedgerEntryType.DEBIT),
+                argThat(cost -> cost.compareTo(expectedCost) == 0));
     }
 
     @Test
@@ -182,6 +200,7 @@ class MessageServiceTest {
         verifyNoInteractions(messageQueue);
         commit();
         verify(messageQueue).enqueue(message);
+        verify(messageRepository).markEnqueued(99L, NOW);
     }
 
     @Test
@@ -196,6 +215,22 @@ class MessageServiceTest {
 
         assertThatCode(MessageServiceTest::commit).doesNotThrowAnyException();
         assertThat(message.getStatus()).isEqualTo(MessageStatus.QUEUED);
+        // Sem enqueued_at, a rotina periodica do PendingMessagesRecovery publica de novo
+        verify(messageRepository, never()).markEnqueued(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("falha ao marcar a publicação depois de publicar não propaga")
+    void markEnqueuedFailureIsSwallowed() {
+        MessageRequest request = request(MessagePriority.NORMAL);
+        givenSenderAndConversation(request);
+        givenSaveReturnsWithId();
+        doThrow(new RuntimeException("banco fora do ar")).when(messageRepository).markEnqueued(anyLong(), any());
+
+        Message message = messageService.sendMessage(request);
+
+        assertThatCode(MessageServiceTest::commit).doesNotThrowAnyException();
+        verify(messageQueue).enqueue(message);
     }
 
     @Test
@@ -211,7 +246,7 @@ class MessageServiceTest {
         verify(messageRepository, never()).save(any());
         verify(conversationRepository, never()).save(any());
         assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty();
-        verifyNoInteractions(messageQueue);
+        verifyNoInteractions(messageQueue, ledgerService);
     }
 
     @Test
@@ -335,5 +370,60 @@ class MessageServiceTest {
         assertThatThrownBy(() -> messageService.getStatus(1L))
                 .isInstanceOf(ReferencedEntityNotFoundException.class)
                 .hasMessage("Mensagem de id 1 não encontrado(a).");
+    }
+
+    @Nested
+    @DisplayName("failAndRefund")
+    class FailAndRefund {
+
+        private static final Collection<MessageStatus> PENDING =
+                Set.of(MessageStatus.QUEUED, MessageStatus.PROCESSING, MessageStatus.SENT);
+
+        private Message message;
+
+        @BeforeEach
+        void setUp() {
+            message = message(5L, conversation, MessagePriority.URGENT, MessageStatus.PROCESSING);
+        }
+
+        @Test
+        @DisplayName("tira a mensagem de pendente, devolve o custo ao remetente travado e registra o estorno")
+        void refundsPendingMessage() {
+            when(messageRepository.findById(5L)).thenReturn(Optional.of(message));
+            when(clientRepository.findWithLockById(SENDER_ID)).thenReturn(Optional.of(sender));
+            when(messageRepository.updateStatusIfIn(5L, PENDING, MessageStatus.FAILED)).thenReturn(1);
+
+            messageService.failAndRefund(5L);
+
+            InOrder inOrder = inOrder(clientRepository, messageRepository, clientService, ledgerService);
+            inOrder.verify(clientRepository).findWithLockById(SENDER_ID);
+            inOrder.verify(messageRepository).updateStatusIfIn(5L, PENDING, MessageStatus.FAILED);
+            inOrder.verify(clientService).refund(sender, new BigDecimal("0.50"));
+            inOrder.verify(ledgerService).record(sender, message, LedgerEntryType.REFUND, new BigDecimal("0.50"));
+        }
+
+        @Test
+        @DisplayName("mensagem já finalizada (ex.: segunda passagem pela DLQ) não estorna de novo")
+        void alreadyFinalDoesNotRefund() {
+            when(messageRepository.findById(5L)).thenReturn(Optional.of(message));
+            when(clientRepository.findWithLockById(SENDER_ID)).thenReturn(Optional.of(sender));
+            when(messageRepository.updateStatusIfIn(5L, PENDING, MessageStatus.FAILED)).thenReturn(0);
+
+            messageService.failAndRefund(5L);
+
+            verify(clientService, never()).refund(any(), any());
+            verifyNoInteractions(ledgerService);
+        }
+
+        @Test
+        @DisplayName("mensagem inexistente: nada a fazer")
+        void missingMessage() {
+            when(messageRepository.findById(5L)).thenReturn(Optional.empty());
+
+            messageService.failAndRefund(5L);
+
+            verify(messageRepository, never()).updateStatusIfIn(anyLong(), any(), any());
+            verifyNoInteractions(clientService, ledgerService);
+        }
     }
 }

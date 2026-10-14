@@ -1,5 +1,11 @@
 package com.carloslonghi.bcb.controller;
 
+import java.time.Instant;
+import com.carloslonghi.bcb.entity.enums.LedgerEntryType;
+import com.carloslonghi.bcb.controller.response.LedgerEntryResponse;
+import com.carloslonghi.bcb.entity.LedgerEntry;
+import com.carloslonghi.bcb.mapper.LedgerEntryMapper;
+import com.carloslonghi.bcb.service.LedgerService;
 import com.carloslonghi.bcb.controller.request.ClientRequest;
 import com.carloslonghi.bcb.controller.request.ClientUpdateRequest;
 import com.carloslonghi.bcb.controller.response.ClientBalanceResponse;
@@ -39,6 +45,10 @@ class ClientControllerTest {
     private ClientService clientService;
     @Mock
     private ClientMapper clientMapper;
+    @Mock
+    private LedgerService ledgerService;
+    @Mock
+    private LedgerEntryMapper ledgerEntryMapper;
 
     @InjectMocks
     private ClientController controller;
@@ -147,5 +157,20 @@ class ClientControllerTest {
 
         assertThatThrownBy(() -> controller.updateById(2L, new ClientUpdateRequest("Outro")))
                 .isInstanceOf(ClientAccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("getLedger devolve os lançamentos do cliente na ordem do service")
+    void getLedger() {
+        LedgerEntry entry = new LedgerEntry();
+        LedgerEntryResponse entryResponse = new LedgerEntryResponse(3L, 9L, LedgerEntryType.REFUND,
+                new BigDecimal("0.25"), Instant.parse("2026-10-14T12:00:00Z"));
+        when(ledgerService.findByClient(1L)).thenReturn(List.of(entry));
+        when(ledgerEntryMapper.toResponse(entry)).thenReturn(entryResponse);
+
+        ResponseEntity<List<LedgerEntryResponse>> response = controller.getLedger(1L);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).containsExactly(entryResponse);
     }
 }

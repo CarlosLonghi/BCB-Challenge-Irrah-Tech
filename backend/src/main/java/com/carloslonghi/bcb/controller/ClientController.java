@@ -5,9 +5,12 @@ import com.carloslonghi.bcb.controller.request.ClientRequest;
 import com.carloslonghi.bcb.controller.request.ClientUpdateRequest;
 import com.carloslonghi.bcb.controller.response.ClientBalanceResponse;
 import com.carloslonghi.bcb.controller.response.ClientResponse;
+import com.carloslonghi.bcb.controller.response.LedgerEntryResponse;
 import com.carloslonghi.bcb.mapper.ClientMapper;
+import com.carloslonghi.bcb.mapper.LedgerEntryMapper;
 import com.carloslonghi.bcb.entity.Client;
 import com.carloslonghi.bcb.service.ClientService;
+import com.carloslonghi.bcb.service.LedgerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +26,8 @@ public class ClientController implements ClientApi {
 
     private final ClientService clientService;
     private final ClientMapper clientMapper;
+    private final LedgerService ledgerService;
+    private final LedgerEntryMapper ledgerEntryMapper;
 
     @PostMapping("/clients")
     public ResponseEntity<ClientResponse> create(@Valid @RequestBody ClientRequest request) {
@@ -52,5 +57,13 @@ public class ClientController implements ClientApi {
     @GetMapping("/clients/{id}/balance")
     public ResponseEntity<ClientBalanceResponse> getClientBalance(@PathVariable Long id) {
         return ResponseEntity.ok(clientMapper.toBalanceResponse(clientService.findById(id)));
+    }
+
+    @GetMapping("/clients/{id}/ledger")
+    public ResponseEntity<List<LedgerEntryResponse>> getLedger(@PathVariable Long id) {
+        List<LedgerEntryResponse> entries = ledgerService.findByClient(id).stream()
+                .map(ledgerEntryMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(entries);
     }
 }

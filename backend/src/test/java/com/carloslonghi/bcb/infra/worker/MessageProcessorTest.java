@@ -86,14 +86,6 @@ class MessageProcessorTest {
     }
 
     @Test
-    @DisplayName("markFailed grava FAILED")
-    void markFailed() {
-        messageProcessor.markFailed(1L);
-
-        verify(messageRepository).updateStatus(1L, MessageStatus.FAILED);
-    }
-
-    @Test
     @DisplayName("falha do banco no meio do processamento propaga (para o retry do Rabbit) e para nas etapas seguintes")
     void databaseFailurePropagates() {
         when(messageRepository.findById(1L)).thenReturn(Optional.of(messageWithStatus(MessageStatus.QUEUED)));

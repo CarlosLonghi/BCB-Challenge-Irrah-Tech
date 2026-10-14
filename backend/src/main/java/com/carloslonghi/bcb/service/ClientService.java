@@ -75,6 +75,17 @@ public class ClientService {
         clientRepository.save(client);
     }
 
+    // Devolve o que o debit tirou: ao saldo no pre-pago, ao limite no pos-pago
+    public void refund(Client client, BigDecimal amount) {
+        if (client.getPlanType() == ClientPlanType.PRE_PAID) {
+            client.setBalance(client.getBalance().add(amount));
+        } else {
+            client.setLimit(client.getLimit().add(amount));
+        }
+
+        clientRepository.save(client);
+    }
+
     private Long getAuthenticatedClientId() {
         return (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }

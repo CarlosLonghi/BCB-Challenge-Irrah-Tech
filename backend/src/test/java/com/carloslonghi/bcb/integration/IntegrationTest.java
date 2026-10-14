@@ -60,7 +60,7 @@ public abstract class IntegrationTest {
 
     @BeforeEach
     void cleanDatabase() {
-        jdbcTemplate.execute("TRUNCATE tb_messages, tb_conversations, tb_clients RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE tb_ledger_entries, tb_messages, tb_conversations, tb_clients RESTART IDENTITY CASCADE");
     }
 
     protected Long createPrePaidClient(String document, String balance) throws Exception {

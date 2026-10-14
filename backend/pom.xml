@@ -207,6 +207,7 @@
 					<!-- Sem logica testavel em unidade: bootstrap, configuracao de infraestrutura, specs do Swagger e DTOs -->
 					<excludes>
 						<exclude>com/carloslonghi/bcb/BcbApplication.class</exclude>
+						<exclude>com/carloslonghi/bcb/config/AppConfig*.class</exclude>
 						<exclude>com/carloslonghi/bcb/config/RabbitConfig*.class</exclude>
 						<exclude>com/carloslonghi/bcb/config/SecurityConfig*.class</exclude>
 						<exclude>com/carloslonghi/bcb/config/SwaggerConfig*.class</exclude>
