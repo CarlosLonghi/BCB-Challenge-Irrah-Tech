@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.carloslonghi</groupId>
@@ -29,7 +29,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
-		<springdoc.version>3.0.0</springdoc.version>
+		<springdoc.version>3.1.1</springdoc.version>
 		<bucket4j.version>8.21.0</bucket4j.version>
 	</properties>
 	<dependencies>
@@ -228,7 +228,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.12</version>
+				<version>0.8.15</version>
 				<configuration>
 					<!-- Sem logica testavel em unidade: bootstrap, configuracao de infraestrutura, specs do Swagger e DTOs -->
 					<excludes>

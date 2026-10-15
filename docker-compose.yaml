@@ -4,7 +4,7 @@
 
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: bcb-db
     restart: always
     environment:
@@ -14,7 +14,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d bcb" ]
       interval: 10s
