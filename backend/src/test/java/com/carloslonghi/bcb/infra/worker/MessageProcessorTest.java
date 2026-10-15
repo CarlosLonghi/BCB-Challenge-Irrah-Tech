@@ -3,11 +3,13 @@ package com.carloslonghi.bcb.infra.worker;
 import java.time.ZoneOffset;
 import java.time.Instant;
 import java.time.Clock;
+import java.time.Duration;
 import org.mockito.Spy;
 import com.carloslonghi.bcb.entity.Message;
 import com.carloslonghi.bcb.entity.enums.MessagePriority;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
 import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
+import com.carloslonghi.bcb.infra.metrics.MessageMetrics;
 import com.carloslonghi.bcb.repository.MessageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +52,8 @@ class MessageProcessorTest {
     private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private MessageMetrics metrics;
 
     @InjectMocks
     private MessageProcessor messageProcessor;
@@ -78,6 +82,8 @@ class MessageProcessorTest {
         inOrder.verify(events).publishEvent(new MessageStatusChanged(1L, 7L, 1L, MessageStatus.SENT));
         inOrder.verify(messageRepository).markDelivered(1L, NOW);
         inOrder.verify(events).publishEvent(new MessageStatusChanged(1L, 7L, 1L, MessageStatus.DELIVERED));
+        // Da criacao (TestData: 2026-01-01T10:00Z) ate a entrega
+        verify(metrics).delivered(MessagePriority.NORMAL, Duration.between(Instant.parse("2026-01-01T10:00:00Z"), NOW));
     }
 
     @ParameterizedTest
@@ -115,6 +121,7 @@ class MessageProcessorTest {
 
         verify(messageRepository).updateStatus(1L, MessageStatus.PROCESSING);
         verify(messageRepository, never()).markDelivered(anyLong(), any());
+        verifyNoInteractions(metrics);
     }
 
     @Test

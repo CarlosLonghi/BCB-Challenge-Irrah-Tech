@@ -20,6 +20,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
   402: 'Saldo ou limite insuficiente para enviar a mensagem.',
   403: 'Acesso negado.',
   404: 'Registro não encontrado.',
+  429: 'Muitas tentativas. Aguarde um pouco e tente de novo.',
 };
 
 // Quem sabe "deslogar" é o AuthProvider; ele se registra aqui.

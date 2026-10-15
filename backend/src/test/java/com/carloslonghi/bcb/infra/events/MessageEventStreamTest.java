@@ -1,6 +1,7 @@
 package com.carloslonghi.bcb.infra.events;
 
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,18 @@ class MessageEventStreamTest {
         stream.heartbeat();
 
         assertThat(stream.connections(1L)).isZero();
+    }
+
+    @Test
+    @DisplayName("métrica bcb.events.connections soma as abas de todos os clientes")
+    void connectionsGauge() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        stream.bindTo(registry);
+        stream.subscribe(1L);
+        stream.subscribe(1L);
+        stream.subscribe(2L);
+
+        assertThat(registry.get("bcb.events.connections").gauge().value()).isEqualTo(3);
     }
 
     @Test

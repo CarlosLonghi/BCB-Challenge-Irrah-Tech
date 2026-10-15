@@ -22,6 +22,7 @@ import com.carloslonghi.bcb.exception.InsufficientBalanceException;
 import com.carloslonghi.bcb.exception.MissingRecipientException;
 import com.carloslonghi.bcb.exception.ReferencedEntityNotFoundException;
 import com.carloslonghi.bcb.infra.events.MessageStatusChanged;
+import com.carloslonghi.bcb.infra.metrics.MessageMetrics;
 import com.carloslonghi.bcb.infra.queue.MessageQueue;
 import com.carloslonghi.bcb.repository.ClientRepository;
 import com.carloslonghi.bcb.repository.ConversationRepository;
@@ -87,6 +88,8 @@ class MessageServiceTest {
     private Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     @Mock
     private ApplicationEventPublisher events;
+    @Mock
+    private MessageMetrics metrics;
 
     @InjectMocks
     private MessageService messageService;
@@ -194,7 +197,7 @@ class MessageServiceTest {
     }
 
     @Test
-    @DisplayName("sendMessage só enfileira depois do commit")
+    @DisplayName("sendMessage só enfileira e conta o envio depois do commit")
     void enqueuesOnlyAfterCommit() {
         MessageRequest request = request(MessagePriority.NORMAL);
         givenSenderAndConversation(request);
@@ -202,8 +205,9 @@ class MessageServiceTest {
 
         Message message = messageService.sendMessage(request);
 
-        verifyNoInteractions(messageQueue);
+        verifyNoInteractions(messageQueue, metrics);
         commit();
+        verify(metrics).sent(MessagePriority.NORMAL);
         verify(messageQueue).enqueue(message);
         verify(messageRepository).markEnqueued(99L, NOW);
     }
@@ -416,6 +420,7 @@ class MessageServiceTest {
             inOrder.verify(ledgerService).record(sender, message, LedgerEntryType.REFUND, new BigDecimal("0.50"));
             inOrder.verify(events).publishEvent(
                     new MessageStatusChanged(SENDER_ID, conversation.getId(), 5L, MessageStatus.FAILED));
+            verify(metrics).failed(MessagePriority.URGENT);
         }
 
         @Test
@@ -428,7 +433,7 @@ class MessageServiceTest {
             messageService.failAndRefund(5L);
 
             verify(clientService, never()).refund(any(), any());
-            verifyNoInteractions(ledgerService, events);
+            verifyNoInteractions(ledgerService, events, metrics);
         }
 
         @Test
