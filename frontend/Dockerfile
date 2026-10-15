@@ -1,5 +1,5 @@
 # Etapa 1: build estático com Node.
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /app
 
 # Dependências primeiro: a camada fica em cache enquanto package*.json não mudar.
