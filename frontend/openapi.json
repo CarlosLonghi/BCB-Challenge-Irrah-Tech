@@ -55,20 +55,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Cliente não encontrado",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -88,6 +74,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente não encontrado",
+            "content" : { }
           },
           "200" : {
             "description" : "Cliente encontrado",
@@ -153,20 +153,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "ID de outro cliente",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -186,6 +172,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ID de outro cliente",
+            "content" : { }
           },
           "200" : {
             "description" : "Cliente atualizado com sucesso",
@@ -244,26 +244,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Forbidden",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -276,6 +256,26 @@
           },
           "400" : {
             "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -355,20 +355,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Dados inválidos",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -388,6 +374,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Dados inválidos",
+            "content" : { }
           },
           "201" : {
             "description" : "Mensagem enviada com sucesso",
@@ -426,26 +426,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Forbidden",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -458,6 +438,26 @@
           },
           "400" : {
             "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -547,20 +547,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Dados inválidos",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -580,6 +566,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Dados inválidos",
+            "content" : { }
           },
           "201" : {
             "description" : "Cliente criado com sucesso",
@@ -629,20 +629,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Cliente inativo",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -662,6 +648,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente inativo",
+            "content" : { }
           },
           "200" : {
             "description" : "Token gerado com sucesso, junto com os dados do cliente",
@@ -703,26 +703,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Forbidden",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -735,6 +715,26 @@
           },
           "400" : {
             "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -790,20 +790,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Mensagem não encontrada",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -823,6 +809,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Mensagem não encontrada",
+            "content" : { }
           },
           "200" : {
             "description" : "Mensagem encontrada",
@@ -871,20 +871,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Mensagem não encontrada",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -904,6 +890,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Mensagem não encontrada",
+            "content" : { }
           },
           "200" : {
             "description" : "Status retornado com sucesso",
@@ -942,26 +942,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Forbidden",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -974,6 +954,26 @@
           },
           "400" : {
             "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1040,26 +1040,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Forbidden",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -1072,6 +1052,26 @@
           },
           "400" : {
             "description" : "Bad Request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden",
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -1130,20 +1130,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Conversa não encontrada",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -1163,6 +1149,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Conversa não encontrada",
+            "content" : { }
           },
           "200" : {
             "description" : "Conversa encontrada",
@@ -1230,20 +1230,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Conversa não encontrada",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -1263,6 +1249,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Conversa não encontrada",
+            "content" : { }
           },
           "200" : {
             "description" : "Mensagens listadas com sucesso",
@@ -1333,20 +1333,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Extrato de outro cliente",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -1366,6 +1352,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Extrato de outro cliente",
+            "content" : { }
           },
           "200" : {
             "description" : "Extrato retornado com sucesso",
@@ -1417,20 +1417,6 @@
               }
             }
           },
-          "402" : {
-            "description" : "Payment Required",
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403" : {
-            "description" : "Cliente não encontrado",
-            "content" : { }
-          },
           "409" : {
             "description" : "Conflict",
             "content" : {
@@ -1450,6 +1436,20 @@
                 }
               }
             }
+          },
+          "402" : {
+            "description" : "Payment Required",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Cliente não encontrado",
+            "content" : { }
           },
           "200" : {
             "description" : "Saldo/limite retornado com sucesso",
@@ -1642,7 +1642,7 @@
           "document" : {
             "type" : "string",
             "description" : "CPF (11 dígitos) ou CNPJ (14 dígitos), só números; deve combinar com documentType",
-            "example" : 12345678909,
+            "example" : "12345678909",
             "minLength" : 1,
             "pattern" : "\\d{11}|\\d{14}"
           },
@@ -1662,12 +1662,14 @@
           "balance" : {
             "type" : "number",
             "description" : "Saldo inicial em R$ (usado no pré-pago)",
-            "example" : 10.0
+            "example" : 10.0,
+            "minimum" : 0
           },
           "limit" : {
             "type" : "number",
             "description" : "Limite de consumo em R$ (usado no pós-pago)",
-            "example" : 0.0
+            "example" : 0.0,
+            "minimum" : 0
           },
           "active" : {
             "type" : "boolean"
@@ -1682,7 +1684,7 @@
           "document" : {
             "type" : "string",
             "description" : "CPF ou CNPJ do cliente, só dígitos",
-            "example" : 12345678909,
+            "example" : "12345678909",
             "minLength" : 1
           },
           "password" : {
