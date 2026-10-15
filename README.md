@@ -28,6 +28,18 @@ docker compose up --build
 
 Para parar e apagar os dados: `docker compose down -v`.
 
+**Volume criado no Postgres 16.** O compose usa o Postgres 18, que monta o volume em `/var/lib/postgresql` e não abre dados da versão 16. Para manter os dados, exporte antes de atualizar (ainda com o 16 rodando) e importe depois:
+
+```bash
+docker compose exec db pg_dump -U postgres -Fc bcb > bcb.dump   # ainda no Postgres 16
+docker compose down -v                                         # apaga o volume antigo
+docker compose up -d --wait db                                 # sobe só o banco, já no 18
+docker compose exec -T db pg_restore -U postgres -d bcb --clean --if-exists --no-owner < bcb.dump
+docker compose up -d --build --wait
+```
+
+Sem dados a preservar, basta `docker compose down -v` antes de subir.
+
 ### Configuração (`.env`)
 
 Sem `.env`, o compose usa credenciais e um segredo JWT de desenvolvimento. Para trocar, copie `.env.example` para `.env` na raiz e ajuste os valores: senha do Postgres, usuário e senha do RabbitMQ e `JWT_SECRET`. A senha do Postgres só vale na criação do volume. Com um banco já criado, mudá-la exige `docker compose down -v`, que apaga os dados.
