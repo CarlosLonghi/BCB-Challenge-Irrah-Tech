@@ -28,7 +28,7 @@ Tudo sobe com `docker compose up --build` (`docker-compose.yaml`; credenciais em
 | Pacote | O que tem | Onde vai código novo |
 |---|---|---|
 | `controller` | Controllers REST (`/auth`, `/clients`, `/conversations`, `/messages`, `/queue`) e o stream SSE (`/events`) | Endpoint novo: método no controller certo |
-| `controller/api/spec` | Interfaces `*Api` com as anotações do Swagger; o controller as implementa | Documentação OpenAPI do endpoint |
+| `controller/api/spec` | Interfaces `*Api` com as anotações do Swagger; o controller as implementa. Cada rota declara as próprias respostas de erro (corpo `ErrorResponse`): com `springdoc.override-with-generic-response=false`, as do `ApplicationControllerAdvice` não entram sozinhas. `@SecurityRequirement` vai em cada método protegido, nunca na interface quando ela tem rota pública | Documentação OpenAPI do endpoint |
 | `controller/request`, `controller/response` | DTOs (records) com Bean Validation | Formato de entrada/saída |
 | `service` | Regras de negócio; leem o cliente logado do `SecurityContextHolder` | Toda regra nova |
 | `repository` | Spring Data JPA | Queries derivadas ou `@Query` |

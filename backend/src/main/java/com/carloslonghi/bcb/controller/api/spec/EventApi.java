@@ -1,6 +1,7 @@
 package com.carloslonghi.bcb.controller.api.spec;
 
 import com.carloslonghi.bcb.controller.response.MessageStatusEventResponse;
+import com.carloslonghi.bcb.controller.response.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,7 +34,7 @@ public interface EventApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     SseEmitter subscribe();

@@ -4,6 +4,7 @@ import com.carloslonghi.bcb.controller.response.MessageResponse;
 import com.carloslonghi.bcb.controller.request.MessageRequest;
 import com.carloslonghi.bcb.controller.response.SendMessageResponse;
 import com.carloslonghi.bcb.entity.enums.MessageStatus;
+import com.carloslonghi.bcb.controller.response.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -38,14 +39,24 @@ public interface MessageApi {
                     )
             ),
             @ApiResponse(
-                    responseCode = "403",
-                    description = "Dados inválidos",
-                    content = @Content
+                    responseCode = "400",
+                    description = "Dados inválidos (conteúdo vazio, prioridade ausente ou nova conversa sem recipientId/recipientName)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "402",
+                    description = "Saldo (pré-pago) ou limite (pós-pago) insuficiente",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Conversa não encontrada (ou de outro cliente)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<SendMessageResponse> send(
@@ -92,7 +103,7 @@ public interface MessageApi {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Mensagem enviada com sucesso",
+                    description = "Mensagens listadas com sucesso",
                     content = @Content(
                             mediaType = "application/json",
                             array = @ArraySchema(
@@ -103,7 +114,7 @@ public interface MessageApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<List<MessageResponse>> findAll(
@@ -127,12 +138,12 @@ public interface MessageApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
-                    responseCode = "403",
-                    description = "Mensagem não encontrada",
-                    content = @Content
+                    responseCode = "404",
+                    description = "Mensagem não encontrada (ou de outro cliente)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<MessageResponse> findById(
@@ -150,12 +161,12 @@ public interface MessageApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
-                    responseCode = "403",
-                    description = "Mensagem não encontrada",
-                    content = @Content
+                    responseCode = "404",
+                    description = "Mensagem não encontrada (ou de outro cliente)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<MessageStatus> getStatus(

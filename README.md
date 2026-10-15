@@ -22,7 +22,7 @@ docker compose up --build
 | Frontend | http://localhost:3000 |
 | API | http://localhost:8080 |
 | Swagger | http://localhost:8080/swagger-ui/index.html |
-| RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`) |
+| RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`). Se o login falhar depois de trocar a versão da imagem (`SESSION_EXPIRY is not defined` no console), recarregue sem cache: Ctrl+Shift+R |
 | PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`, ou os valores do `.env`) |
 | Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d` |
 
