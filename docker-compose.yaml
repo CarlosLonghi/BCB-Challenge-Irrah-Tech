@@ -85,7 +85,7 @@ services:
 
   # Opcional: docker compose --profile observability up -d → http://localhost:9090
   prometheus:
-    image: prom/prometheus:v3.5.0
+    image: prom/prometheus:v3.15.0
     container_name: bcb-prometheus
     profiles: [ observability ]
     depends_on:
