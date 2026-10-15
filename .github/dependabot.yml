@@ -17,12 +17,20 @@ updates:
     groups:
       frontend-minor-patch:
         update-types: [ minor, patch ]
+    ignore:
+      # Os tipos acompanham o Node que roda (imagem node:24); sobem junto com ele, à mão
+      - dependency-name: "@types/node"
+        update-types: [ "version-update:semver-major" ]
 
   # Imagens base dos Dockerfiles
   - package-ecosystem: docker
     directories: [ /backend, /frontend ]
     schedule:
       interval: weekly
+    ignore:
+      # Só Node LTS (versões pares); a troca de major é feita à mão, junto com o @types/node
+      - dependency-name: node
+        update-types: [ "version-update:semver-major" ]
 
   # Imagens do docker-compose.yaml (Postgres, RabbitMQ, Prometheus)
   - package-ecosystem: docker-compose
