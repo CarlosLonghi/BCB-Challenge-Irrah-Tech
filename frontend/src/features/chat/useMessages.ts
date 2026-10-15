@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { EventStream } from '@/shared/api/events';
 import type { Message } from '@/shared/api/types';
 import { isFullPage, mergeById } from '@/shared/api/pagination';
 import { useAction } from '@/shared/hooks/useAction';
-import type { EventStream } from '@/shared/hooks/useEventStream';
 import { useFetch } from '@/shared/hooks/useFetch';
 import { listMessages } from './api';
 import { POLLING_INTERVAL_MS, hasPendingMessages } from './messageRules';

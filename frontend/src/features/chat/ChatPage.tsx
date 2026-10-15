@@ -1,5 +1,5 @@
 import { useParams } from 'react-router';
-import { useAppData } from '@/app/appDataContext';
+import { useEvents } from '@/app/appStore';
 import { useSession } from '@/features/auth/useAuth';
 import { useConversation } from '@/features/conversations/useConversation';
 import type { Priority } from '@/shared/api/types';
@@ -25,7 +25,7 @@ function Chat({ conversationId }: { conversationId: number }) {
   const session = useSession();
   // Conversa e mensagens são buscadas em paralelo (duas buscas independentes).
   const conversation = useConversation(conversationId);
-  const messages = useMessages(conversationId, useAppData().events);
+  const messages = useMessages(conversationId, useEvents());
   const send = useSendMessage(session.client.planType, messages.reload);
 
   // Conversa inexistente ou de outro cliente (404): não há o que mostrar além do erro.

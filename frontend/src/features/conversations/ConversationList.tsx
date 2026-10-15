@@ -2,14 +2,14 @@ import { PlusIcon } from '@phosphor-icons/react';
 import { Link } from 'react-router';
 import { ErrorMessage } from '@/shared/components/ErrorMessage';
 import { Loading } from '@/shared/components/Loading';
-import { useAppData } from '@/app/appDataContext';
+import { useConversations } from '@/app/appStore';
 import { ConversationItem } from './ConversationItem';
 import styles from './ConversationList.module.css';
 
 /** Coluna da esquerda: conversas do cliente, a mais recente primeiro (ordem do backend). */
 export function ConversationList() {
   const { data: conversations, isPending, error, reload, hasMore, loadMore, isLoadingMore, loadMoreError } =
-    useAppData().conversations;
+    useConversations();
 
   return (
     <aside className={styles.list}>

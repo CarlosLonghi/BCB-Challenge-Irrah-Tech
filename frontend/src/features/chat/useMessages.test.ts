@@ -1,9 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StreamEvent } from '@/shared/api/events';
+import type { EventStream, StreamEvent, StreamListener } from '@/shared/api/events';
 import type { Message, MessageStatus } from '@/shared/api/types';
 import { PAGE_SIZE } from '@/shared/api/pagination';
-import type { EventStream, StreamListener } from '@/shared/hooks/useEventStream';
 import { listMessages } from './api';
 import { POLLING_INTERVAL_MS } from './messageRules';
 import { useMessages } from './useMessages';

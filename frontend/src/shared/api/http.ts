@@ -23,7 +23,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
   429: 'Muitas tentativas. Aguarde um pouco e tente de novo.',
 };
 
-// Quem sabe "deslogar" é o AuthProvider; ele se registra aqui.
+// Quem sabe "deslogar" é o authStore; ele se registra aqui.
 let unauthorizedHandler: (() => void) | null = null;
 
 export function setUnauthorizedHandler(handler: (() => void) | null) {

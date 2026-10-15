@@ -1,4 +1,4 @@
-import { useAppData } from '@/app/appDataContext';
+import { useAppStore } from '@/app/appStore';
 import type { Balance, PlanType, SendMessageRequest } from '@/shared/api/types';
 import { useAction } from '@/shared/hooks/useAction';
 import { sendMessage } from './api';
@@ -10,12 +10,12 @@ import { sendMessage } from './api';
  * 3. avisa quem chamou (`onSent`), que cuida do próprio histórico.
  */
 export function useSendMessage(planType: PlanType, onSent?: () => void) {
-  const { balance, conversations } = useAppData();
-
   return useAction(async (message: SendMessageRequest) => {
     const response = await sendMessage(message);
-    balance.setData((old) => old && withCurrentBalance(old, planType, response.currentBalance));
-    conversations.reload();
+    // Lidas na hora do envio: o hook não precisa re-renderizar quando o saldo ou as conversas mudam.
+    const { setBalance, reloadConversations } = useAppStore.getState();
+    setBalance((old) => old && withCurrentBalance(old, planType, response.currentBalance));
+    void reloadConversations();
     onSent?.();
     return response;
   });

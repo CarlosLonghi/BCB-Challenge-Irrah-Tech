@@ -1,11 +1,12 @@
-import { useContext } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import type { Session } from '@/shared/api/session';
-import { AuthContext } from './authContext';
+import { useAuthStore } from './authStore';
 
+/** Sessão e ações de login/logout; re-renderiza só quando um desses campos muda. */
 export function useAuth() {
-  const value = useContext(AuthContext);
-  if (!value) throw new Error('useAuth precisa estar dentro de <AuthProvider>');
-  return value;
+  return useAuthStore(
+    useShallow(({ session, expired, signIn, signOut }) => ({ session, expired, signIn, signOut })),
+  );
 }
 
 /**
@@ -13,7 +14,7 @@ export function useAuth() {
  * Evita espalhar `session!` pelos componentes.
  */
 export function useSession(): Session {
-  const { session } = useAuth();
+  const session = useAuthStore((state) => state.session);
   if (!session) throw new Error('useSession só pode ser usado dentro de <ProtectedRoute>');
   return session;
 }

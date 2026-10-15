@@ -6,7 +6,7 @@ import { ApiError } from '@/shared/api/http';
 import { clearSession, loadSession } from '@/shared/api/session';
 import type { AuthResponse } from '@/shared/api/types';
 import { login } from './api';
-import { AuthProvider } from './AuthProvider';
+import { useAuthStore } from './authStore';
 import { LoginPage } from './LoginPage';
 
 vi.mock('./api', () => ({ login: vi.fn() }));
@@ -22,12 +22,10 @@ const SESSION: AuthResponse = {
 function renderLogin() {
   render(
     <MemoryRouter initialEntries={['/login']}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<p>Tela logada</p>} />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<p>Tela logada</p>} />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -35,6 +33,8 @@ function renderLogin() {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.mocked(login).mockReset();
+    // O store é global: cada teste começa deslogado.
+    useAuthStore.setState(useAuthStore.getInitialState(), true);
   });
 
   afterEach(() => {
