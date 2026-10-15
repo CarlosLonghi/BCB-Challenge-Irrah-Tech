@@ -2,6 +2,7 @@ package com.carloslonghi.bcb.controller.api.spec;
 
 import com.carloslonghi.bcb.controller.response.ConversationResponse;
 import com.carloslonghi.bcb.controller.response.MessageResponse;
+import com.carloslonghi.bcb.controller.response.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -38,7 +39,7 @@ public interface ConversationApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<List<ConversationResponse>> findAll(
@@ -62,12 +63,12 @@ public interface ConversationApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
-                    responseCode = "403",
-                    description = "Conversa não encontrada",
-                    content = @Content
+                    responseCode = "404",
+                    description = "Conversa não encontrada (ou de outro cliente)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<ConversationResponse> findById(
@@ -92,12 +93,12 @@ public interface ConversationApi {
             @ApiResponse(
                     responseCode = "401",
                     description = "Token ausente ou inválido",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
-                    responseCode = "403",
-                    description = "Conversa não encontrada",
-                    content = @Content
+                    responseCode = "404",
+                    description = "Conversa não encontrada (ou de outro cliente)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<List<MessageResponse>> findMessagesByConversationId(

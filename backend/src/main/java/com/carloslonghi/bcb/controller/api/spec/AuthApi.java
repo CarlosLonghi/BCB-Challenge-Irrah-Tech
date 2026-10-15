@@ -2,6 +2,7 @@ package com.carloslonghi.bcb.controller.api.spec;
 
 import com.carloslonghi.bcb.controller.request.AuthRequest;
 import com.carloslonghi.bcb.controller.response.AuthResponse;
+import com.carloslonghi.bcb.controller.response.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -24,14 +25,24 @@ public interface AuthApi {
                     )
             ),
             @ApiResponse(
+                    responseCode = "400",
+                    description = "Documento ou senha ausentes",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "401",
                     description = "Documento ou senha inválidos",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
                     responseCode = "403",
                     description = "Cliente inativo",
-                    content = @Content
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Muitas tentativas do mesmo IP; aguarde o tempo do header Retry-After",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     ResponseEntity<AuthResponse> authenticate(
