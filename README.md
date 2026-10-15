@@ -190,7 +190,7 @@ docker-compose.yaml
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.
-- **Dependências:** o Dependabot abre PRs semanais (maven, npm, imagens Docker e actions), com minor e patch agrupadas.
+- **Dependências:** o Dependabot abre PRs semanais (maven, npm, imagens Docker e actions), com minor e patch agrupadas. O major do Node e do `@types/node` fica de fora: sobe à mão, para a próxima LTS.
 - **Tipos do frontend gerados do backend:** `frontend/openapi.json` é o contrato versionado. Um teste de integração do backend falha quando ele diverge do `/v3/api-docs`, e o CI falha se `npm run api:types` mudar os tipos gerados. Assim, uma mudança de DTO no backend quebra o build do frontend em vez de passar despercebida.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.
