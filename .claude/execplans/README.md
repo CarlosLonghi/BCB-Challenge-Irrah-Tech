@@ -10,6 +10,7 @@ _Nenhum._
 
 ## Concluídos
 
+- [2026-10-15-zustand-estado-global.md](2026-10-15-zustand-estado-global.md): AuthProvider e AppDataProvider trocados por stores do Zustand
 - [2026-10-14-devops-observabilidade.md](2026-10-14-devops-observabilidade.md): imagens sem root, compose com .env, métricas e tracing, rate limit e Dependabot
 - [2026-10-14-tempo-real-frontend.md](2026-10-14-tempo-real-frontend.md): status por SSE, React 19/react-router 7/RabbitMQ 4, tipos gerados do OpenAPI, testes de tela e E2E
 - [2026-10-14-banco-desempenho.md](2026-10-14-banco-desempenho.md): índices, paginação por cursor, LAZY, tipos e leitura simulada

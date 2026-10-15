@@ -114,25 +114,31 @@ Migrations: `backend/src/main/resources/db/migrations` (`V1__create_initial_sche
 
 | Pasta | O que tem |
 |---|---|
-| `app/` | `App.tsx` (rotas), `AppDataProvider` (saldo, conversas e a conexão SSE do cliente logado, compartilhados pela tela), `layout/` (cabeçalho, layout, tela vazia) |
-| `features/auth` | Login, cadastro (`registerForm.ts`), `AuthProvider`, `ProtectedRoute` |
+| `app/` | `App.tsx` (rotas), `appStore.ts` (store Zustand com saldo, conversas paginadas e a conexão SSE do cliente logado, mais os hooks `useBalance`, `useConversations` e `useEvents`), `useAppSession.ts` (carga inicial, SSE e limpeza do store enquanto o layout está montado), `layout/` (cabeçalho, layout, tela vazia) |
+| `features/auth` | Login, cadastro (`registerForm.ts`), `authStore.ts` (store Zustand da sessão; registra o handler de 401), `useAuth`/`useSession`, `ProtectedRoute` |
 | `features/conversations` | Lista, item e nova conversa |
 | `features/chat` | `ChatPage`, lista de mensagens ("Carregar anteriores", rolagem preservada), composer, ícone de status, `useMessages` (página recente atualizada pelo SSE + páginas antigas), `useSendMessage`, `messageRules.ts` |
 | `features/account` | API de saldo (`GET /clients/{id}/balance`) |
 | `shared/api` | `http.ts` (fetch + token + erros), `events.ts` (leitura do SSE com fetch e reconexão), `session.ts`, `schema.d.ts` (gerado, não editar) e `types.ts` (apelidos dos schemas) |
-| `shared/hooks` | `useFetch` e `useAction`, no lugar de TanStack Query; `useEventStream` (uma conexão SSE, vários assinantes) |
+| `shared/hooks` | `useFetch` e `useAction`, no lugar de TanStack Query, para o estado local de cada tela |
 | `shared/components`, `shared/utils` | Componentes genéricos; `document.ts` (máscara e validação de CPF/CNPJ), `format.ts` |
 | `styles/global.css` | Tokens visuais (cores, fontes IBM Plex) |
+
+Estado:
+- Compartilhado entre partes da tela (sessão, saldo, conversas, conexão SSE): stores do Zustand (`authStore`, `appStore`). Os componentes leem por seletor (com `useShallow` quando o seletor monta objeto), então só re-renderizam quando o pedaço que usam muda.
+- Local de uma tela (mensagens, conversa aberta, envio, formulários): `useFetch`/`useAction`. Não mova para o store sem motivo.
+- O `appStore` é global e sobrevive ao unmount: o `reset()` roda no cleanup do `useAppSession` (ao sair do layout) e no `signOut`, para o próximo cliente não ver dados do anterior. Cada busca do store tem um id, e só a mais recente de cada tipo grava; o `reset` invalida as que estão no ar (o equivalente à flag `ignore` do `useFetch`).
+- Nos testes, os stores são globais: resete com `useXStore.setState(useXStore.getInitialState(), true)` no `beforeEach` (no `afterEach` do arquivo a tela ainda está montada e quebraria).
 
 Rotas: `/login`, `/cadastro`, e dentro do layout protegido `/`, `/conversas/nova`, `/conversas/:id`. Estilo com CSS Modules (`*.module.css` ao lado do componente). Cada feature tem seu `api.ts`.
 
 Status em tempo real:
-- O `AppDataProvider` abre uma conexão SSE (`shared/api/events.ts`) com `fetch`, e não com `EventSource`, para mandar o `Authorization`. Se a conexão cair, reconecta com espera de 1s a 30s, e um 401 encerra a sessão.
-- O `useMessages` assina os eventos. O de uma mensagem já carregada troca o status na hora; o de uma mensagem mais nova que a página recarrega a página recente. A cada reconexão (`ready` com `reconnected`), recarrega também.
-- O `AppDataProvider` recarrega o saldo num `FAILED` (houve estorno) e a cada reconexão.
+- O `useAppSession` abre uma conexão SSE (`shared/api/events.ts`) com `fetch`, e não com `EventSource`, para mandar o `Authorization`. Se a conexão cair, reconecta com espera de 1s a 30s, e um 401 encerra a sessão.
+- O `useMessages` assina os eventos (`useEvents()` do `appStore`). O de uma mensagem já carregada troca o status na hora; o de uma mensagem mais nova que a página recarrega a página recente. A cada reconexão (`ready` com `reconnected`), recarrega também.
+- O `useAppSession` recarrega o saldo num `FAILED` (houve estorno) e a cada reconexão.
 - Só com o stream fora do ar volta o polling (`POLLING_INTERVAL_MS = 3000` em `messageRules.ts`): rebusca a página recente enquanto houver mensagem que ainda vai mudar (`QUEUED`, `PROCESSING`, `SENT` ou `DELIVERED`).
 
-Tipos da API: `frontend/openapi.json` é o contrato versionado (o `OpenApiContractIT` do backend falha se ele diferir do `/v3/api-docs`). `npm run api:types` gera `schema.d.ts` a partir dele com o openapi-typescript; o `overrides` do `package.json` o faz usar o TypeScript 6 do projeto. O `OpenApiCustomizer` do `SwaggerConfig` marca todos os campos dos `*Response` como obrigatórios; os que podem vir nulos declaram `types = {"string", "null"}`. As conversas da barra lateral são paginadas em `features/conversations/useConversationPages.ts` ("Carregar mais"); `shared/api/pagination.ts` tem o `PAGE_SIZE` e o `mergeById`. URL da API em `VITE_API_URL`.
+Tipos da API: `frontend/openapi.json` é o contrato versionado (o `OpenApiContractIT` do backend falha se ele diferir do `/v3/api-docs`). `npm run api:types` gera `schema.d.ts` a partir dele com o openapi-typescript; o `overrides` do `package.json` o faz usar o TypeScript 6 do projeto. O `OpenApiCustomizer` do `SwaggerConfig` marca todos os campos dos `*Response` como obrigatórios; os que podem vir nulos declaram `types = {"string", "null"}`. As conversas da barra lateral são paginadas no `app/appStore.ts` ("Carregar mais"); `shared/api/pagination.ts` tem o `PAGE_SIZE` e o `mergeById`. URL da API em `VITE_API_URL`.
 
 ## Invariantes (não quebrar)
 

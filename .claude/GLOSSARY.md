@@ -38,7 +38,7 @@ Termos do domínio e onde aparecem no código. O enunciado está em `docs/` (por
 | Worker | `RabbitMessageListener` + `MessageProcessor` | Consumidor que simula o envio e avança o status (cerca de 8 s até `DELIVERED`). |
 | Recuperação | `PendingMessagesRecovery` | Reenfileira as mensagens pendentes quando o backend sobe e, a cada 30s, republica as que nunca foram publicadas. |
 | Status da fila | `GET /queue/status`, `QueueStatusService` | Contagem por status/prioridade feita no banco. |
-| Evento / stream | `GET /events`, `MessageStatusChanged`, `MessageEventStream`; `shared/api/events.ts`, `useEventStream` | Conexão SSE do cliente logado: cada mudança de status de mensagem chega como evento `message-status`. Lida com `fetch` para mandar o Bearer. |
+| Evento / stream | `GET /events`, `MessageStatusChanged`, `MessageEventStream`; `shared/api/events.ts`, `useAppSession`, `useEvents` | Conexão SSE do cliente logado: cada mudança de status de mensagem chega como evento `message-status`. Lida com `fetch` para mandar o Bearer. |
 | Contrato / tipos gerados | `frontend/openapi.json`, `OpenApiContractIT`, `shared/api/schema.d.ts` | OpenAPI versionado, conferido contra o backend; os tipos do frontend são gerados dele (`npm run api:types`). |
 | Migration | `db/migrations/V<n>__*.sql` | Única forma de mudar o schema (Flyway; Hibernate em `validate`). |
 | IT | `*IT.java` | Teste de integração (Testcontainers), roda no `mvnw verify`. |

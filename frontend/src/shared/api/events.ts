@@ -10,6 +10,16 @@ export type StreamEvent =
   | { type: 'ready'; reconnected: boolean }
   | { type: 'message-status'; data: MessageStatusEvent };
 
+export type StreamListener = (event: StreamEvent) => void;
+
+/** O que uma parte da tela usa do stream (ver `useEvents` em `app/appStore.ts`). */
+export interface EventStream {
+  /** false enquanto o stream está fora: quem depende dele volta a fazer polling. */
+  connected: boolean;
+  /** Recebe cada evento até chamar a função devolvida. */
+  subscribe: (listener: StreamListener) => () => void;
+}
+
 interface RawEvent {
   event: string;
   data: string;

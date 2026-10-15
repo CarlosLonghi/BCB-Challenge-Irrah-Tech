@@ -2,14 +2,11 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppDataContext, type AppData } from '@/app/appDataContext';
-import { AuthContext } from '@/features/auth/authContext';
+import { emit, useAppStore } from '@/app/appStore';
+import { useAuthStore } from '@/features/auth/authStore';
 import { getConversation } from '@/features/conversations/api';
-import type { ConversationPages } from '@/features/conversations/useConversationPages';
 import type { StreamEvent } from '@/shared/api/events';
-import type { AuthResponse, Balance, Message } from '@/shared/api/types';
-import type { StreamListener } from '@/shared/hooks/useEventStream';
-import type { FetchState } from '@/shared/hooks/useFetch';
+import type { AuthResponse, Message } from '@/shared/api/types';
 import { listMessages, sendMessage } from './api';
 import { ChatPage } from './ChatPage';
 
@@ -30,39 +27,29 @@ const MESSAGE: Message = {
 };
 
 function renderChat() {
-  const listeners = new Set<StreamListener>();
-  const balance = { data: { balance: 10, limit: 0 }, setData: vi.fn() } as unknown as FetchState<Balance>;
-  const conversations = { reload: vi.fn() } as unknown as ConversationPages;
-  const appData: AppData = {
-    balance,
-    conversations,
-    events: {
-      connected: true,
-      subscribe: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    },
-  };
+  // Os stores são globais: o teste define o estado e troca as ações do envio por espiões.
+  const setBalance = vi.fn();
+  const reloadConversations = vi.fn();
+  useAuthStore.setState({ session: SESSION, expired: false });
+  useAppStore.setState({ connected: true, setBalance, reloadConversations });
 
   render(
-    <AuthContext.Provider value={{ session: SESSION, expired: false, signIn: vi.fn(), signOut: vi.fn() }}>
-      <AppDataContext.Provider value={appData}>
-        <MemoryRouter initialEntries={['/conversas/7']}>
-          <Routes>
-            <Route path="/conversas/:id" element={<ChatPage />} />
-          </Routes>
-        </MemoryRouter>
-      </AppDataContext.Provider>
-    </AuthContext.Provider>,
+    <MemoryRouter initialEntries={['/conversas/7']}>
+      <Routes>
+        <Route path="/conversas/:id" element={<ChatPage />} />
+      </Routes>
+    </MemoryRouter>,
   );
 
-  const emit = (event: StreamEvent) => act(() => listeners.forEach((listener) => listener(event)));
-  return { balance, conversations, emit };
+  return { setBalance, reloadConversations, emit: (event: StreamEvent) => act(() => emit(event)) };
 }
 
 describe('ChatPage', () => {
   beforeEach(() => {
+    // Reset no início, não no afterEach: o afterEach do arquivo roda antes do cleanup do setup,
+    // e a tela ainda montada quebraria ao perder a sessão.
+    useAppStore.setState(useAppStore.getInitialState(), true);
+    useAuthStore.setState(useAuthStore.getInitialState(), true);
     vi.mocked(listMessages).mockReset().mockResolvedValue([MESSAGE]);
     vi.mocked(sendMessage).mockReset();
     vi.mocked(getConversation).mockResolvedValue({
@@ -89,7 +76,7 @@ describe('ChatPage', () => {
     vi.mocked(sendMessage).mockResolvedValue({
       id: 4, conversationId: 7, status: 'QUEUED', estimatedDelivery: '2026-10-14T12:00:30Z', cost: 0.5, currentBalance: 9.5,
     });
-    const { balance, conversations } = renderChat();
+    const { setBalance, reloadConversations } = renderChat();
     await screen.findByText('Olá, Maria');
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Mensagem' }), 'Urgente!');
@@ -97,8 +84,8 @@ describe('ChatPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /Enviar/ }));
 
     expect(sendMessage).toHaveBeenCalledWith({ conversationId: 7, content: 'Urgente!', priority: 'URGENT' });
-    expect(conversations.reload).toHaveBeenCalledOnce();
-    const updateBalance = vi.mocked(balance.setData).mock.calls[0][0];
+    expect(reloadConversations).toHaveBeenCalledOnce();
+    const updateBalance = setBalance.mock.calls[0][0];
     expect(updateBalance({ balance: 10, limit: 0 })).toEqual({ balance: 9.5, limit: 0 });
     expect(listMessages).toHaveBeenCalledTimes(2);
     expect(screen.getByRole('textbox', { name: 'Mensagem' })).toHaveValue('');
