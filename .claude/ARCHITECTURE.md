@@ -158,7 +158,7 @@ Tipos da API: `frontend/openapi.json` é o contrato versionado (o `OpenApiContra
 
 Helpers: `support/TestData` (fábricas de clientes pré/pós-pago etc.) e `support/AuthenticatedClient` (põe um `clientId` como principal, como o resource server faz). Nos ITs, `IntegrationTest.login` usa a senha `PASSWORD` dos clientes criados por `createClient`. O JaCoCo exige 80% de linhas nos unitários (`verify` falha abaixo disso). Uma classe só: `sh ./mvnw test -Dtest=ClientServiceTest` ou `sh ./mvnw verify -Dtest=NONE -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=MessageFlowIT`.
 
-Dependabot (`.github/dependabot.yml`): PRs semanais de maven, npm, imagens Docker (Dockerfiles e compose) e actions, com minor e patch agrupadas.
+Dependabot (`.github/dependabot.yml`): PRs semanais de maven, npm, imagens Docker (Dockerfiles e compose) e actions, com minor e patch agrupadas. Ignora o major da imagem `node` e do `@types/node`, que sobem juntos e à mão, só para versões LTS.
 
 CI (`.github/workflows/ci.yml`), em todo PR para a `main`, que é protegida (só entra por PR com os jobs verdes):
 - backend: `mvnw verify`;
