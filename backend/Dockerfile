@@ -1,5 +1,5 @@
 # Build
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:25-jdk-alpine AS builder
 WORKDIR /app
 
 # Wrapper e pom.xml primeiro: a camada com as dependências fica em cache enquanto o pom.xml não mudar,
@@ -13,7 +13,7 @@ COPY src src/
 RUN ./mvnw -B -q package -DskipTests
 
 # Execução: só o JRE e o jar, com um usuário sem privilégios
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=builder /app/target/*.jar app.jar

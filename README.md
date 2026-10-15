@@ -28,6 +28,18 @@ docker compose up --build
 
 Para parar e apagar os dados: `docker compose down -v`.
 
+**Volume criado no Postgres 16.** O compose usa o Postgres 18, que monta o volume em `/var/lib/postgresql` e não abre dados da versão 16. Para manter os dados, exporte antes de atualizar (ainda com o 16 rodando) e importe depois:
+
+```bash
+docker compose exec db pg_dump -U postgres -Fc bcb > bcb.dump   # ainda no Postgres 16
+docker compose down -v                                         # apaga o volume antigo
+docker compose up -d --wait db                                 # sobe só o banco, já no 18
+docker compose exec -T db pg_restore -U postgres -d bcb --clean --if-exists --no-owner < bcb.dump
+docker compose up -d --build --wait
+```
+
+Sem dados a preservar, basta `docker compose down -v` antes de subir.
+
 ### Configuração (`.env`)
 
 Sem `.env`, o compose usa credenciais e um segredo JWT de desenvolvimento. Para trocar, copie `.env.example` para `.env` na raiz e ajuste os valores: senha do Postgres, usuário e senha do RabbitMQ e `JWT_SECRET`. A senha do Postgres só vale na criação do volume. Com um banco já criado, mudá-la exige `docker compose down -v`, que apaga os dados.
@@ -190,7 +202,7 @@ docker-compose.yaml
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.
-- **Dependências:** o Dependabot abre PRs semanais (maven, npm, imagens Docker e actions), com minor e patch agrupadas.
+- **Dependências:** o Dependabot abre PRs semanais (maven, npm, imagens Docker e actions), com minor e patch agrupadas. O major do Node e do `@types/node` fica de fora: sobe à mão, para a próxima LTS.
 - **Tipos do frontend gerados do backend:** `frontend/openapi.json` é o contrato versionado. Um teste de integração do backend falha quando ele diverge do `/v3/api-docs`, e o CI falha se `npm run api:types` mudar os tipos gerados. Assim, uma mudança de DTO no backend quebra o build do frontend em vez de passar despercebida.
 - **Frontend sem bibliotecas de dados:** busca com hooks próprios (`useFetch`, `useAction`) em vez de TanStack Query, e máscara de CPF/CNPJ como função pura testada. Menos dependências e código que dá para explicar linha a linha.
 - **Status `FAILED` sem reenvio:** o valor volta por estorno; um botão de reenvio cobraria de novo.
