@@ -1,4 +1,5 @@
-# Coleta as métricas do backend pela porta de gerência (8081), que só existe na rede interna do compose.
+# Coleta as métricas do backend pela porta de gerência (8081) e as do RabbitMQ e do Postgres pelos exporters.
+# Nenhuma dessas portas é publicada: só existem na rede interna do compose.
 global:
   scrape_interval: 15s
 
@@ -7,3 +8,20 @@ scrape_configs:
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: [ "backend:8081" ]
+
+  # Plugin rabbitmq_prometheus do broker: memória, disco, alarmes, conexões e taxas globais (agregado)
+  - job_name: rabbitmq
+    static_configs:
+      - targets: [ "rabbitmq:15692" ]
+
+  # Mesmo plugin, por fila: o endpoint agregado não traz o label queue
+  - job_name: rabbitmq-queues
+    metrics_path: /metrics/detailed
+    params:
+      family: [ queue_coarse_metrics, queue_consumer_count ]
+    static_configs:
+      - targets: [ "rabbitmq:15692" ]
+
+  - job_name: postgres
+    static_configs:
+      - targets: [ "postgres-exporter:9187" ]

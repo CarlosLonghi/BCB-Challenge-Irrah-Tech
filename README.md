@@ -149,7 +149,7 @@ gh pr create
 backend/    API Spring Boot (Java 21, PostgreSQL, RabbitMQ)
 frontend/   Interface React
 docs/       enunciado e regras do desafio
-observability/   Prometheus e Grafana (datasource e dashboard) do perfil observability do compose
+observability/   Prometheus e Grafana (datasource, dashboard e alertas) do perfil observability do compose
 docker-compose.yaml
 .env.example     credenciais e segredo do compose
 ```
@@ -160,7 +160,7 @@ docker-compose.yaml
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 19 + TypeScript + Vite, React Router 7, CSS Modules, tipos gerados do OpenAPI (openapi-typescript), Vitest + Testing Library, Playwright, ícones Phosphor; servido por nginx no Docker
 - **Infra:** Docker Compose, GitHub Actions (CI), Dependabot
-- **Operação:** Micrometer + Prometheus + Grafana, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
+- **Operação:** Micrometer + Prometheus + Grafana (com alertas), postgres-exporter e plugin Prometheus do RabbitMQ, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
 
 ## Funcionalidades
 
@@ -200,7 +200,16 @@ docker-compose.yaml
 - **Imagens Docker:** as duas rodam sem root (backend com o usuário `app`; frontend com `nginx-unprivileged`, na porta 8080 do container) e têm `HEALTHCHECK`. O build do backend baixa as dependências numa camada própria, então mudar só o código não baixa tudo de novo.
 - **Observabilidade:**
   - Métricas em `/actuator/prometheus`, na porta de gerência 8081, fora do alcance da rede. Além das do Spring (HTTP, JVM, Hikari, RabbitMQ), há métricas próprias: `bcb_messages_sent_total`, `bcb_messages_delivery_seconds` (da criação até a entrega, por prioridade), `bcb_messages_failed_total`, `bcb_queue_messages` (fila e DLQ) e `bcb_events_connections`.
-  - No perfil `observability`, o Grafana já sobe com o dashboard **BCB** (`observability/grafana/dashboards/bcb.json`): envios por segundo, latência de entrega p50/p95/p99 por prioridade, falhas, fila e DLQ, conexões SSE, requisições e erros HTTP, heap, CPU e pool do Hikari. Os painéis de mensagem ficam sem dados até o primeiro envio, porque os contadores só passam a existir nele. Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
+  - No perfil `observability`, o Prometheus coleta três fontes, todas só na rede interna do compose: o backend (`backend:8081`), o broker RabbitMQ pelo plugin `rabbitmq_prometheus`, que já vem na imagem (`rabbitmq:15692`, agregado e por fila), e o Postgres pelo `postgres-exporter`, que usa o mesmo usuário do backend.
+  - O Grafana já sobe com o dashboard **BCB** (`observability/grafana/dashboards/bcb.json`):
+    - visão geral: backend, Postgres e RabbitMQ no ar e alertas disparados;
+    - mensagens: envios por segundo, latência de entrega p50/p95/p99 por prioridade, falhas e estornos;
+    - fila e worker: fila e DLQ, conexões SSE, tempo de processamento no worker e o cliente AMQP do backend;
+    - API: requisições, p95 por rota (o histograma HTTP está ligado no `application.properties`), erros por status e logs WARN/ERROR;
+    - rotinas agendadas, JVM (heap, CPU, GC) e banco do lado da aplicação (Hikari e repositórios mais lentos);
+    - RabbitMQ (mensagens por fila, fluxo, memória e disco do broker) e PostgreSQL (conexões, transações, cache hit, linhas por tabela, seq scan × índice, locks).
+  - Os painéis de mensagem ficam sem dados até o primeiro envio, porque os contadores só passam a existir nele. As consultas filtram por `job`, porque o backend e o broker expõem nomes iguais (`rabbitmq_connections`). Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
+  - Alertas (`observability/grafana/provisioning/alerting/bcb.yml`): backend ou Postgres fora, mensagens na DLQ, p95 de entrega URGENT acima de 15s, taxa de falha acima de 5%, 5xx na API, pool do Hikari saturado e alarme de memória ou disco no RabbitMQ. Eles aparecem em **Alerting** e no topo do dashboard. Não há contact point configurado: para receber por e-mail ou Slack, crie um no Grafana e aponte a política padrão para ele.
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.
