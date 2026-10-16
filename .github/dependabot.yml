@@ -32,7 +32,7 @@ updates:
       - dependency-name: node
         update-types: [ "version-update:semver-major" ]
 
-  # Imagens do docker-compose.yaml (Postgres, RabbitMQ, Prometheus)
+  # Imagens do docker-compose.yaml (Postgres, RabbitMQ, Prometheus, Grafana)
   - package-ecosystem: docker-compose
     directory: /
     schedule:

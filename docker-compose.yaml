@@ -83,7 +83,7 @@ services:
     ports:
       - "3000:8080"   # build estático servido por nginx sem root
 
-  # Opcional: docker compose --profile observability up -d → http://localhost:9090
+  # Opcional: docker compose --profile observability up -d → Prometheus em :9090 e Grafana em :3001
   prometheus:
     image: prom/prometheus:v3.15.0
     container_name: bcb-prometheus
@@ -95,6 +95,26 @@ services:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  # Datasource e dashboard "BCB" provisionados de observability/grafana (sem volume: tudo vem dos arquivos)
+  grafana:
+    image: grafana/grafana:13.2.4
+    container_name: bcb-grafana
+    profiles: [ observability ]
+    depends_on:
+      - prometheus
+    ports:
+      - "127.0.0.1:3001:3000"   # a 3000 do host é do frontend
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/bcb.json
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
 
 volumes:
   db_data:

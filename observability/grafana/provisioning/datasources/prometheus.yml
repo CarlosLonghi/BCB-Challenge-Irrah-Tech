@@ -1,0 +1,14 @@
+# Prometheus do compose como datasource padrão. O uid fixo é o que o dashboard referencia.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      # Igual ao scrape_interval do observability/prometheus.yml, para o $__rate_interval sair certo
+      timeInterval: 15s

@@ -25,6 +25,7 @@ docker compose up --build
 | RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`). Se o login falhar depois de trocar a versão da imagem (`SESSION_EXPIRY is not defined` no console), recarregue sem cache: Ctrl+Shift+R |
 | PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`, ou os valores do `.env`) |
 | Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d` |
+| Grafana (opcional) | http://localhost:3001 (`admin` / `admin`, ou os valores do `.env`), no mesmo perfil. Abre direto no dashboard **BCB** |
 
 Para parar e apagar os dados: `docker compose down -v`.
 
@@ -148,7 +149,7 @@ gh pr create
 backend/    API Spring Boot (Java 21, PostgreSQL, RabbitMQ)
 frontend/   Interface React
 docs/       enunciado e regras do desafio
-observability/   configuração do Prometheus (perfil observability do compose)
+observability/   Prometheus e Grafana (datasource e dashboard) do perfil observability do compose
 docker-compose.yaml
 .env.example     credenciais e segredo do compose
 ```
@@ -159,7 +160,7 @@ docker-compose.yaml
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 19 + TypeScript + Vite, React Router 7, CSS Modules, tipos gerados do OpenAPI (openapi-typescript), Vitest + Testing Library, Playwright, ícones Phosphor; servido por nginx no Docker
 - **Infra:** Docker Compose, GitHub Actions (CI), Dependabot
-- **Operação:** Micrometer + Prometheus, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
+- **Operação:** Micrometer + Prometheus + Grafana, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
 
 ## Funcionalidades
 
@@ -199,6 +200,7 @@ docker-compose.yaml
 - **Imagens Docker:** as duas rodam sem root (backend com o usuário `app`; frontend com `nginx-unprivileged`, na porta 8080 do container) e têm `HEALTHCHECK`. O build do backend baixa as dependências numa camada própria, então mudar só o código não baixa tudo de novo.
 - **Observabilidade:**
   - Métricas em `/actuator/prometheus`, na porta de gerência 8081, fora do alcance da rede. Além das do Spring (HTTP, JVM, Hikari, RabbitMQ), há métricas próprias: `bcb_messages_sent_total`, `bcb_messages_delivery_seconds` (da criação até a entrega, por prioridade), `bcb_messages_failed_total`, `bcb_queue_messages` (fila e DLQ) e `bcb_events_connections`.
+  - No perfil `observability`, o Grafana já sobe com o dashboard **BCB** (`observability/grafana/dashboards/bcb.json`): envios por segundo, latência de entrega p50/p95/p99 por prioridade, falhas, fila e DLQ, conexões SSE, requisições e erros HTTP, heap, CPU e pool do Hikari. Os painéis de mensagem ficam sem dados até o primeiro envio, porque os contadores só passam a existir nele. Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.
