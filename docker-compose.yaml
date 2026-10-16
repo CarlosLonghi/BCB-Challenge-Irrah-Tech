@@ -28,6 +28,7 @@ services:
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"   # painel de gerenciamento (usuário e senha de RABBITMQ_USER/RABBITMQ_PASSWORD)
+    # 15692 (métricas do plugin rabbitmq_prometheus) fica na rede interna: o Prometheus coleta por dentro
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
@@ -91,12 +92,29 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      postgres-exporter:
+        condition: service_started
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
 
-  # Datasource e dashboard "BCB" provisionados de observability/grafana (sem volume: tudo vem dos arquivos)
+  # Métricas do Postgres para o Prometheus (porta 9187 só na rede interna). Usa o mesmo usuário do backend
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.20.1
+    container_name: bcb-postgres-exporter
+    profiles: [ observability ]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_URI: db:5432/bcb?sslmode=disable
+      DATA_SOURCE_USER: ${POSTGRES_USER:-postgres}
+      DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:-postgres}
+
+  # Datasource, dashboard "BCB" e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos)
   grafana:
     image: grafana/grafana:13.2.4
     container_name: bcb-grafana

@@ -21,7 +21,7 @@ Empresas (clientes) mandam mensagens pagas para destinatários. A API debita o c
                              DLQ  bcb.messages.dlq
 ```
 
-Tudo sobe com `docker compose up --build` (`docker-compose.yaml`; credenciais em `.env`, modelo em `.env.example`). Com `--profile observability`, sobem também um Prometheus (:9090) que coleta do backend em `backend:8081` (`observability/prometheus.yml`) e um Grafana (:3001) com o datasource e o dashboard "BCB" provisionados de `observability/grafana` (o JSON em `dashboards/bcb.json` é a fonte da verdade; a tela não salva mudanças).
+Tudo sobe com `docker compose up --build` (`docker-compose.yaml`; credenciais em `.env`, modelo em `.env.example`). Com `--profile observability`, sobem também um Prometheus (:9090) que coleta do backend em `backend:8081`, do RabbitMQ em `rabbitmq:15692` (plugin `rabbitmq_prometheus`, jobs `rabbitmq` e `rabbitmq-queues`) e do Postgres pelo `postgres-exporter:9187` (`observability/prometheus.yml`), e um Grafana (:3001) com datasource, dashboard "BCB" e alertas provisionados de `observability/grafana` (o JSON em `dashboards/bcb.json` é a fonte da verdade; a tela não salva mudanças). Consultas novas no dashboard filtram por `job`: backend e broker expõem nomes iguais (`rabbitmq_connections`, `rabbitmq_channels`).
 
 ## Backend (`backend/src/main/java/com/carloslonghi/bcb`)
 
