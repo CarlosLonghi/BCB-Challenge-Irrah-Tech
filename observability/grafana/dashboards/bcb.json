@@ -2215,7 +2215,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate({__name__=~\"rabbitmq_global_messages_dead_lettered_.*_total\", job=\"rabbitmq\"}[$__rate_interval]))",
+          "expr": "sum(rate(rabbitmq_global_messages_dead_lettered_rejected_total{job=\"rabbitmq\"}[$__rate_interval])) + sum(rate(rabbitmq_global_messages_dead_lettered_expired_total{job=\"rabbitmq\"}[$__rate_interval])) + sum(rate(rabbitmq_global_messages_dead_lettered_maxlen_total{job=\"rabbitmq\"}[$__rate_interval])) + sum(rate(rabbitmq_global_messages_dead_lettered_delivery_limit_total{job=\"rabbitmq\"}[$__rate_interval]))",
           "legendFormat": "para a DLQ",
           "refId": "E"
         }
