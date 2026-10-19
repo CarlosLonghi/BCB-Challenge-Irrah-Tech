@@ -83,6 +83,7 @@ Resultado esperado:
 - 2026-10-14: ficam de fora a publicação de imagem (GHCR) e o deploy do item 5.4, que dependem de onde o projeto vai rodar, e o Grafana. O build das imagens já roda no CI pelo job `e2e`.
 - 2026-10-15: o Grafana entrou depois, no mesmo perfil `observability` (:3001, só em `127.0.0.1`), com datasource e dashboard provisionados por arquivo e sem volume.
 - 2026-10-16: entram as métricas do broker (plugin `rabbitmq_prometheus`, já ativo na imagem, sem container novo) e do Postgres (`postgres-exporter`), o histograma HTTP no backend e alertas provisionados no Grafana. As consultas filtram por `job`, porque backend e broker têm métricas com o mesmo nome. Os alertas ficam sem contact point: aparecem só na tela até haver um destino (e-mail, Slack).
+- 2026-10-19: o Discord entra por override (`docker-compose.discord.yaml`), e não no provisioning padrão: o contact point exige a URL do webhook, e um valor vazio impediria o Grafana de subir para quem não usa Discord. O Prometheus ganha volume e retenção de 15 dias. Os contadores `bcb_messages_*` passam a ser registrados zerados no startup, para o `increase()` contar o primeiro envio. O CI valida o `prometheus.yml` e o provisioning do Grafana.
 
 ## Validação e aceite
 - `cd backend && sh ./mvnw verify`

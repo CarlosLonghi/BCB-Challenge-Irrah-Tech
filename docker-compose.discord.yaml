@@ -1,0 +1,9 @@
+# Alertas do Grafana no Discord. Use junto com o compose principal:
+#   docker compose -f docker-compose.yaml -f docker-compose.discord.yaml --profile observability up -d
+# A URL do webhook vem do .env (GRAFANA_DISCORD_WEBHOOK_URL); sem ela o compose para com erro.
+services:
+  grafana:
+    environment:
+      GRAFANA_DISCORD_WEBHOOK_URL: ${GRAFANA_DISCORD_WEBHOOK_URL:?defina GRAFANA_DISCORD_WEBHOOK_URL no .env}
+    volumes:
+      - ./observability/grafana/discord/discord.yml:/etc/grafana/provisioning/alerting/discord.yml:ro
