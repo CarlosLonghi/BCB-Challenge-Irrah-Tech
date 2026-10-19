@@ -138,6 +138,8 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/bcb.json
+      # Endereço usado nos links das notificações (Discord); sem isso saem com a porta interna 3000, que no host é do frontend
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
     # Montagens separadas, sobre as pastas que a imagem já tem: o override do Discord acrescenta um arquivo em alerting/
     volumes:
       - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
