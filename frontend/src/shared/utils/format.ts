@@ -1,5 +1,6 @@
 // Funções puras de formatação usadas pelas telas.
 
+/** Tira máscara e espaços: o backend recebe CPF/CNPJ só com números. */
 export function onlyDigits(value: string) {
   return value.replace(/\D/g, '');
 }
@@ -22,13 +23,14 @@ export function formatDocument(value: string) {
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
+/** "R$ 0,25". */
 export function formatMoney(value: number) {
   return money.format(value);
 }
 
 /**
- * Converte data do backend (ISO sem fuso, LocalDateTime) em Date.
- * Sem fuso, o navegador interpreta como horário local, como diz o contrato.
+ * Converte data do backend em Date. O backend manda Instant em ISO-8601 UTC (ex.: "2026-09-30T13:45:00.123Z");
+ * as funções abaixo exibem no fuso do navegador.
  */
 export function parseServerDate(value: string) {
   return new Date(value);
@@ -44,6 +46,7 @@ export function formatShortTime(value: string) {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+/** Horário do balão de mensagem: "14:05". */
 export function formatTime(value: string) {
   return parseServerDate(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }

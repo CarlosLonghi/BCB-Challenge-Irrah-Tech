@@ -7,6 +7,7 @@ import { login } from './api';
 import { AuthCard } from './AuthCard';
 import { useAuth } from './useAuth';
 
+/** Login com CPF/CNPJ e senha. Com sessão, vai direto para `/`; depois de um 401, avisa que a sessão expirou. */
 export function LoginPage() {
   const { session, expired, signIn } = useAuth();
   const [document, setDocument] = useState('');
@@ -16,6 +17,7 @@ export function LoginPage() {
   if (session) return <Navigate to="/" replace />;
 
   const digits = onlyDigits(document);
+  // Só o tamanho: documento com dígito errado recebe do backend o mesmo 401 de senha errada.
   const isValid = (digits.length === 11 || digits.length === 14) && password.length > 0;
 
   function handleSubmit(event: FormEvent) {

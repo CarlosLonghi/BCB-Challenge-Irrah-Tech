@@ -8,6 +8,7 @@ export function listMessages(conversationId: number, before?: number) {
   return request<Message[]>(`/conversations/${conversationId}/messages?limit=${PAGE_SIZE}${cursor}`);
 }
 
+/** Debita e enfileira; a resposta já traz o saldo/limite atualizado (`currentBalance`). */
 export function sendMessage(message: SendMessageRequest) {
   return request<SendMessageResponse>('/messages', { method: 'POST', body: message });
 }
