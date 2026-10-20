@@ -12,6 +12,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * Empresa que envia mensagens pagas (tb_clients).
+ * Pre-pago gasta de {@code balance}; pos-pago gasta de {@code limit}, que guarda o limite restante, e nao o total.
+ * Os dois so mudam por ClientService.debit/refund, com o cliente travado.
+ * Mudou um campo: migration nova (ver CLAUDE.md).
+ */
 @Entity
 @Table(name = "tb_clients")
 @Getter
@@ -39,6 +45,7 @@ public class Client {
     @Column(nullable = false)
     private BigDecimal balance;
 
+    // Limite restante do pos-pago. Coluna client_limit porque "limit" e palavra reservada no SQL
     @Column(name = "client_limit", nullable = false)
     private BigDecimal limit;
 

@@ -2,7 +2,10 @@ package com.carloslonghi.bcb.utils;
 
 import com.carloslonghi.bcb.entity.enums.ClientDocumentType;
 
-// Confere os digitos verificadores de CPF e CNPJ (so numeros, sem mascara)
+/**
+ * Confere os digitos verificadores de CPF e CNPJ (so numeros, sem mascara).
+ * O frontend tem a mesma regra em shared/utils/document.ts.
+ */
 public final class DocumentValidator {
 
     private static final int[] CNPJ_WEIGHTS = {6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2};

@@ -6,7 +6,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.time.Clock;
 
-// @EnableScheduling: rotinas periodicas (PendingMessagesRecovery, ReadSimulator, heartbeat do SSE)
+/**
+ * Beans gerais. {@code @EnableScheduling} liga as rotinas periodicas (PendingMessagesRecovery, ReadSimulator,
+ * heartbeat do MessageEventStream).
+ */
 @Configuration
 @EnableScheduling
 public class AppConfig {

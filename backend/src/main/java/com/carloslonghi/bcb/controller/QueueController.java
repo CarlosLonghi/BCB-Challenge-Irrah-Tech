@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * GET /queue/status: contagem de mensagens por status. Regras no QueueStatusService; documentacao em QueueApi.
+ */
 @RestController
 @RequestMapping("/queue")
 @RequiredArgsConstructor

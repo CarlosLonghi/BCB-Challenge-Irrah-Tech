@@ -17,6 +17,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Rotas /messages: envio e consulta das mensagens do cliente logado. Regras no MessageService;
+ * documentacao em MessageApi.
+ */
 @RestController
 @RequestMapping("/messages")
 @RequiredArgsConstructor

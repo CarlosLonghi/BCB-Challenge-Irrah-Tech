@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * POST /auth: login com documento e senha, devolve o JWT. Regras no AuthService; documentacao em AuthApi.
+ */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor

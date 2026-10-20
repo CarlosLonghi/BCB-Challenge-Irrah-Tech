@@ -20,6 +20,9 @@ import java.util.Set;
  * Simula o envio de uma mensagem: PROCESSING -> SENT -> DELIVERED (o READ vem depois, pelo ReadSimulator).
  * Cada etapa e gravada no banco e publicada como MessageStatusChanged (o frontend recebe por SSE).
  * Chamado pelo RabbitMessageListener.
+ * <p>
+ * Nao e transacional: cada update de status commita sozinho, para o frontend ver cada etapa. E idempotente:
+ * rele a mensagem do banco e ignora as finalizadas, entao receber o mesmo id duas vezes nao reprocessa.
  */
 @Slf4j
 @Component

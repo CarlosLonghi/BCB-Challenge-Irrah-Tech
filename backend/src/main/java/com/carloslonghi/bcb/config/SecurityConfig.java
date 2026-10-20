@@ -26,6 +26,11 @@ import org.springframework.web.filter.CorsFilter;
 
 import java.util.List;
 
+/**
+ * Cadeia de seguranca stateless: CORS, rate limit, rotas publicas e validacao do JWT (oauth2ResourceServer).
+ * Rota publica nova entra so aqui. Depois da autenticacao, o principal e o clientId (Long), que os services
+ * leem do SecurityContextHolder para filtrar os dados do cliente logado.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(RateLimitProperties.class)

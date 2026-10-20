@@ -17,6 +17,10 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
 
+/**
+ * Login por documento e senha e emissao do JWT de sessao (POST /auth).
+ * A validacao do token nas demais rotas nao passa por aqui: e feita pelo oauth2ResourceServer do SecurityConfig.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -26,6 +30,8 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final Clock clock;
 
+    // Documento inexistente, cliente sem senha e senha errada caem no mesmo 401, sem revelar qual foi.
+    // Inativo (403) so e informado depois da senha certa
     public Client authenticate(String document, String password) {
         Client client = clientRepository.findByDocument(document)
                 .filter(found -> found.getPasswordHash() != null)

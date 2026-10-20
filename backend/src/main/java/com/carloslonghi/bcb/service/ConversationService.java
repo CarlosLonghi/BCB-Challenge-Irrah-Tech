@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 
+/**
+ * Conversas do cliente logado com seus destinatarios e as mensagens de cada uma.
+ * Toda busca filtra pelo principal: conversa de outro cliente vira 404.
+ */
 @Service
 @RequiredArgsConstructor
 public class ConversationService {
@@ -46,7 +50,8 @@ public class ConversationService {
                 .orElseThrow(() -> new ReferencedEntityNotFoundException("Conversa", id));
     }
 
-    // Usa a conversa informada ou cria uma nova com o destinatario do request
+    // Usa a conversa informada ou cria uma nova com o destinatario do request. Roda dentro da transacao do
+    // MessageService.sendMessage, que depois sobrescreve o resumo (lastMessage*) com os dados da mensagem gravada
     public Conversation findOrCreate(Client client, MessageRequest request) {
         if (request.conversationId() != null) {
             return findById(request.conversationId());

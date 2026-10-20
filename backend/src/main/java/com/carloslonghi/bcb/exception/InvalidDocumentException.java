@@ -1,6 +1,9 @@
 package com.carloslonghi.bcb.exception;
 
-// Cobre a coerência com o tipo (CPF precisa de 11 dígitos e CNPJ de 14) e os dígitos verificadores.
+/**
+ * Documento incoerente com o tipo (CPF precisa de 11 digitos e CNPJ de 14) ou com digitos
+ * verificadores errados. Vira 400.
+ */
 public class InvalidDocumentException extends RuntimeException {
 
     public InvalidDocumentException(String documentType, int expectedLength) {
