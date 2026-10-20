@@ -5,6 +5,9 @@ import com.carloslonghi.bcb.entity.LedgerEntry;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/**
+ * LedgerEntry -> LedgerEntryResponse. Le so o id da mensagem, sem inicializar o proxy LAZY.
+ */
 @Mapper(componentModel = "spring")
 public interface LedgerEntryMapper {
 

@@ -12,6 +12,11 @@ import org.mapstruct.Named;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * Message -> DTOs. Das associacoes LAZY le so o id, o que nao vai ao banco (open-in-view esta desligado, entao
+ * ler outro campo fora de transacao falharia). A excecao e o toSendResponse, que le o saldo do sender ainda
+ * dentro da requisicao do envio, com a entidade ja carregada.
+ */
 @Mapper(componentModel = "spring")
 public interface MessageMapper {
 
@@ -24,6 +29,7 @@ public interface MessageMapper {
     @Mapping(target = "currentBalance", source = "sender", qualifiedByName = "currentBalance")
     SendMessageResponse toSendResponse(Message entity);
 
+    // Previsao fixa de 30 s; nao acompanha o tamanho da fila
     @Named("estimatedDelivery")
     default Instant estimatedDelivery(Instant createdAt) {
         return createdAt.plusSeconds(30);

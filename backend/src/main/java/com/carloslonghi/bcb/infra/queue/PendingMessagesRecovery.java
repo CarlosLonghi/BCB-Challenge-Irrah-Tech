@@ -16,10 +16,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-// Devolve para a fila as mensagens que ficaram pelo caminho:
-// - na inicializacao, as que estavam QUEUED, PROCESSING ou SENT quando o backend parou. SENT entra tambem:
-//   sem isso a mensagem ficaria parada e o frontend faria polling dela para sempre;
-// - periodicamente, as QUEUED que nunca chegaram ao RabbitMQ (publicacao falhou no afterCommit).
+/**
+ * Devolve para a fila as mensagens que ficaram pelo caminho. Falha numa mensagem nao impede as outras.
+ * <ul>
+ *   <li>Na inicializacao ({@link #requeuePendingMessages}): as que estavam QUEUED, PROCESSING ou SENT quando o
+ *       backend parou. SENT entra tambem: sem isso a mensagem ficaria parada e o frontend esperaria por ela para sempre.</li>
+ *   <li>Periodicamente ({@link #requeueUnpublished}): as QUEUED com enqueued_at nulo, ou seja, que nunca chegaram
+ *       ao RabbitMQ (a publicacao falhou no afterCommit do envio). As que estao na fila esperando a vez nao entram.</li>
+ * </ul>
+ * Se a mesma mensagem chegar duas vezes ao worker, a segunda e ignorada quando a primeira ja a finalizou.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

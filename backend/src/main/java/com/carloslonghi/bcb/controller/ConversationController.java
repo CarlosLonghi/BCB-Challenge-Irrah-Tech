@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * Rotas /conversations do cliente logado. Regras no ConversationService; documentacao em ConversationApi.
+ */
 @RestController
 @RequestMapping("/conversations")
 @RequiredArgsConstructor

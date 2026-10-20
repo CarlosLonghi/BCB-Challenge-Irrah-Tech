@@ -7,6 +7,10 @@ import lombok.Setter;
 
 import java.time.Instant;
 
+/**
+ * Conversa de um cliente com um destinatario (tb_conversations).
+ * Guarda o resumo da ultima mensagem para a lista da barra lateral, atualizado a cada envio (MessageService.sendMessage).
+ */
 @Entity
 @Table(name = "tb_conversations")
 @Getter
@@ -33,6 +37,7 @@ public class Conversation {
     @Column(name = "last_message_time", nullable = false)
     private Instant lastMessageTime;
 
+    // Sempre 0 por enquanto: o sistema so envia; passa a valer quando houver recebimento de mensagens
     @Column(name = "unread_count", nullable = false)
     private int unreadCount;
 }

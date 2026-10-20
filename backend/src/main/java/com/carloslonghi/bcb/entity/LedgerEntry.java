@@ -9,6 +9,10 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+/**
+ * Lancamento do extrato (tb_ledger_entries), gravado por LedgerService.record na mesma transacao que altera
+ * o saldo/limite do cliente.
+ */
 @Entity
 @Table(name = "tb_ledger_entries")
 @Getter

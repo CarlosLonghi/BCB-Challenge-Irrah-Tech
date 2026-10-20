@@ -5,8 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
-// Com prefetch = 1 e um consumidor so, processa uma mensagem por vez.
-// Se process() lancar excecao, o Spring tenta de novo (retry) e depois chama o MessageRecoverer.
+/**
+ * Consumidor da fila bcb.messages. Com prefetch = 1 e um consumidor so, processa uma mensagem por vez,
+ * e as urgentes que estao esperando passam na frente das normais.
+ * Se process() lancar excecao, o Spring tenta de novo (spring.rabbitmq.listener.simple.retry.*) e, esgotadas as
+ * tentativas, chama o MessageRecoverer do RabbitConfig, que marca FAILED, estorna e manda para a DLQ.
+ */
 @Component
 @RequiredArgsConstructor
 public class RabbitMessageListener {

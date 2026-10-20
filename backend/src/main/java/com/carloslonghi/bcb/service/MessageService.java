@@ -30,6 +30,17 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Envio de mensagens e consultas das mensagens do cliente logado.
+ * <p>
+ * Envio ({@link #sendMessage}): numa transacao so, trava o cliente, debita, grava a mensagem QUEUED e o DEBIT
+ * no extrato. A publicacao no RabbitMQ fica para o afterCommit; se falhar, o PendingMessagesRecovery republica.
+ * <p>
+ * Estorno ({@link #failAndRefund}): chamado pelo MessageRecoverer do RabbitConfig quando o worker esgota as
+ * tentativas. Marca FAILED e devolve o custo uma vez so, mesmo que a mesma mensagem passe por ali de novo.
+ * <p>
+ * As consultas filtram pelo principal (clientId do JWT): mensagem de outro cliente vira 404.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -48,13 +59,16 @@ public class MessageService {
     private final ApplicationEventPublisher events;
     private final MessageMetrics metrics;
 
+    // Ainda nao finalizadas: so destas o estorno tira para FAILED
     private static final Set<MessageStatus> PENDING_STATUSES =
             Set.of(MessageStatus.QUEUED, MessageStatus.PROCESSING, MessageStatus.SENT);
 
+    // Custo por prioridade; o valor gravado em Message.cost e o que o estorno devolve
     private static final BigDecimal NORMAL_COST = new BigDecimal("0.25");
     private static final BigDecimal URGENT_COST = new BigDecimal("0.50");
 
-    // Debito, mensagem e conversa sao gravados juntos: se algo falhar, nada e cobrado
+    // Debito, mensagem e conversa sao gravados juntos: se algo falhar, nada e cobrado.
+    // O lock no cliente (SELECT ... FOR UPDATE) segura envios simultaneos dele ate o commit, para nao gastarem o mesmo saldo
     @Transactional
     public Message sendMessage(MessageRequest request) {
         Long senderId = (Long) SecurityContextHolder.getContext()
@@ -115,6 +129,7 @@ public class MessageService {
                 : messageRepository.findBySenderIdAndIdLessThanOrderByIdDesc(authId, before, PageLimit.of(limit));
     }
 
+    // Mensagem de outro cliente conta como inexistente (404), para nao revelar quais ids existem
     public Message findById(Long id) {
         Long authId = (Long) SecurityContextHolder.getContext()
                 .getAuthentication().getPrincipal();

@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * Rotas /clients. POST /clients (cadastro) e publico; as demais so acessam o proprio cliente (403 para outro id).
+ * Regras no ClientService e no LedgerService; documentacao em ClientApi.
+ */
 @RestController
 @RequestMapping
 @RequiredArgsConstructor

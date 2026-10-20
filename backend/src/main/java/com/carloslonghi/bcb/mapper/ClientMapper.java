@@ -7,6 +7,9 @@ import com.carloslonghi.bcb.entity.Client;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/**
+ * Client <-> DTOs. O toEntity ignora passwordHash: a senha vira hash no ClientService.create.
+ */
 @Mapper(componentModel = "spring")
 public interface ClientMapper {
 

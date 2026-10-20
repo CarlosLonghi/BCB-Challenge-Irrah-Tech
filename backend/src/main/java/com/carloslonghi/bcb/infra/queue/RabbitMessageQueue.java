@@ -7,7 +7,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-// Publica so o id da mensagem. O consumidor le o resto do banco
+/**
+ * Publica so o id da mensagem na fila bcb.messages, com prioridade AMQP 10 (URGENT) ou 1 (NORMAL).
+ * O consumidor le o resto do banco, entao o conteudo na fila nunca fica desatualizado.
+ */
 @Component
 @RequiredArgsConstructor
 public class RabbitMessageQueue implements MessageQueue {

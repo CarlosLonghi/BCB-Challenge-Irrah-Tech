@@ -19,6 +19,14 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * Cadastro e consulta de clientes e movimentacao de saldo/limite.
+ * <p>
+ * Saldo, limite e plano sao definidos so no cadastro; depois mudam apenas por {@link #debit} e {@link #refund},
+ * chamados dentro da transacao do MessageService, com o cliente ja travado e o lancamento do extrato gravado junto.
+ * <p>
+ * Cada cliente so acessa os proprios dados: outro id vira ClientAccessDeniedException (403).
+ */
 @Service
 @RequiredArgsConstructor
 public class ClientService {
@@ -26,6 +34,8 @@ public class ClientService {
     private final ClientRepository clientRepository;
     private final PasswordEncoder passwordEncoder;
 
+    // Valida o documento e grava a senha como hash BCrypt. Dois cadastros simultaneos do mesmo documento passam
+    // pelo existsByDocument, mas a constraint unique do banco barra o segundo (409 no ApplicationControllerAdvice)
     public Client create(Client client, String rawPassword) {
         validateDocumentType(client);
         if (clientRepository.existsByDocument(client.getDocument())) {
@@ -58,6 +68,9 @@ public class ClientService {
         return clientRepository.save(client);
     }
 
+    // Pre-pago desconta do saldo; pos-pago desconta do limite (o campo guarda o limite restante). Sem saldo ou
+    // limite: excecao (402), e a transacao do envio desfaz tudo. Quem chama precisa ter travado o cliente
+    // (ClientRepository.findWithLockById) e gravar o DEBIT no extrato
     public void debit(Client client, BigDecimal amount) {
         if (client.getPlanType() == ClientPlanType.PRE_PAID) {
             if (client.getBalance().compareTo(amount) < 0) {
@@ -96,6 +109,7 @@ public class ClientService {
         }
     }
 
+    // Tamanho coerente com o tipo (CPF 11, CNPJ 14) e digitos verificadores; os dois casos viram 400
     private void validateDocumentType(Client client) {
         int expectedLength = client.getDocumentType() == ClientDocumentType.CPF ? 11 : 14;
         if (client.getDocument().length() != expectedLength) {

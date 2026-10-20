@@ -14,7 +14,10 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 
-// O proprio backend emite e valida o token, entao basta uma chave simetrica (HS256)
+/**
+ * Encoder e decoder do JWT de sessao. O proprio backend emite (AuthService) e valida (SecurityConfig) o token,
+ * entao basta uma chave simetrica (HS256), vinda de JwtProperties.
+ */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
 public class JwtConfig {
