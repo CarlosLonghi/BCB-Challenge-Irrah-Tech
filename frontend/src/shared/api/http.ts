@@ -1,9 +1,10 @@
 import { loadSession } from './session';
 import type { ApiErrorBody } from './types';
 
+/** Base da API: `VITE_API_URL` no build; sem ela, o backend local do `npm run dev`. */
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8080';
 
-/** Erro de API com o status HTTP e a mensagem pronta para mostrar ao usuário. */
+/** Erro de API com o status HTTP e a mensagem pronta para mostrar ao usuário. Status 0 = backend fora do ar. */
 export class ApiError extends Error {
   readonly status: number;
 

@@ -7,6 +7,10 @@ import { NewConversationPage } from '@/features/conversations/NewConversationPag
 import { AppLayout } from './layout/AppLayout';
 import { EmptyChat } from './layout/EmptyChat';
 
+/**
+ * Rotas do app. Login e cadastro são públicos; o resto passa pelo ProtectedRoute (sem sessão, vai para /login)
+ * e fica dentro do AppLayout (cabeçalho + lista de conversas), com o chat como rota filha.
+ */
 export default function App() {
   return (
     <Routes>

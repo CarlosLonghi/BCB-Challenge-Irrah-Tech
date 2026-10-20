@@ -2,7 +2,7 @@ import type { Message, MessageStatus, Priority } from '@/shared/api/types';
 
 // Regras de mensagem que a tela precisa conhecer (sem chamadas à API).
 
-/** Custo fixo por prioridade (regra de negócio; o backend cobra o mesmo valor). */
+/** Custo fixo por prioridade, só para exibir antes do envio. Quem cobra é o backend (MessageService); mudou lá, mude aqui. */
 export const PRIORITY_COST: Record<Priority, number> = {
   NORMAL: 0.25,
   URGENT: 0.5,

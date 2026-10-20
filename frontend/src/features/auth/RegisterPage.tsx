@@ -21,6 +21,7 @@ const PLAN_OPTIONS: SegmentedOption<PlanType>[] = [
   { value: 'POST_PAID', label: 'Pós-pago' },
 ];
 
+/** Cadastro de cliente. As regras do formulário ficam em `registerForm.ts`; esta tela só cuida do estado e do envio. */
 export function RegisterPage() {
   const { session, signIn } = useAuth();
   const [form, setForm] = useState<RegisterForm>(INITIAL_REGISTER_FORM);

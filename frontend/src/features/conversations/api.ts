@@ -7,6 +7,7 @@ export function listConversations(page = 0) {
   return request<Conversation[]>(`/conversations?page=${page}&size=${PAGE_SIZE}`);
 }
 
+/** Conversa de outro cliente responde 404, como se não existisse. */
 export function getConversation(id: number) {
   return request<Conversation>(`/conversations/${id}`);
 }

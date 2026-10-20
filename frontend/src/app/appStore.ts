@@ -7,15 +7,7 @@ import type { EventStream, StreamEvent, StreamListener } from '@/shared/api/even
 import { isFullPage, mergeById } from '@/shared/api/pagination';
 import type { Balance, Conversation } from '@/shared/api/types';
 
-/**
- * Dados usados por mais de uma parte da tela logada: o cabeçalho mostra o saldo, a coluna da
- * esquerda mostra as conversas, e o envio de mensagem (no chat) precisa atualizar os dois.
- * `connected` é o estado da conexão SSE única da tela (status das mensagens em tempo real).
- *
- * O store é global e sobrevive ao unmount: quem limpa é o `reset()`, chamado pelo `useAppSession`
- * ao sair do layout e pelo `signOut`. Assim o próximo cliente a entrar nunca vê dados do anterior.
- * Estado de uma tela só (mensagens, conversa aberta) continua no `useFetch`, não aqui.
- */
+/** Resultado de uma busca do store: `error` não apaga `data`, então um erro ao recarregar mantém o que já estava na tela. */
 interface Loadable<T> {
   data: T | undefined;
   error: Error | null;
@@ -38,6 +30,7 @@ interface AppState {
   reloadConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   setConnected: (connected: boolean) => void;
+  /** Volta ao estado inicial e descarta as buscas em andamento (logout, saída do layout). */
   reset: () => void;
 }
 
@@ -67,6 +60,15 @@ function toError(err: unknown) {
   return err instanceof Error ? err : new Error('Algo deu errado.');
 }
 
+/**
+ * Dados usados por mais de uma parte da tela logada: o cabeçalho mostra o saldo, a coluna da
+ * esquerda mostra as conversas, e o envio de mensagem (no chat) precisa atualizar os dois.
+ * `connected` é o estado da conexão SSE única da tela (status das mensagens em tempo real).
+ *
+ * O store é global e sobrevive ao unmount: quem limpa é o `reset()`, chamado pelo `useAppSession`
+ * ao sair do layout e pelo `signOut`. Assim o próximo cliente a entrar nunca vê dados do anterior.
+ * Estado de uma tela só (mensagens, conversa aberta) continua no `useFetch`, não aqui.
+ */
 export const useAppStore = create<AppState>()((set, get) => ({
   ...EMPTY,
 
@@ -133,6 +135,7 @@ export function emit(event: StreamEvent) {
 
 // Hooks de leitura: cada componente re-renderiza só quando o pedaço que ele usa muda.
 
+/** Saldo e limite do cliente logado; o cabeçalho escolhe qual mostrar pelo plano. */
 export function useBalance() {
   return useAppStore((state) => state.balance);
 }

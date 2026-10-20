@@ -12,6 +12,7 @@ const STATUS: Record<MessageStatus, { Icon: Icon; label: string }> = {
   FAILED: { Icon: WarningCircleIcon, label: 'Falhou' },
 };
 
+/** Ícone e rótulo do status; a cor vem da classe com o nome do status no CSS Module. */
 export function MessageStatusIcon({ status }: { status: MessageStatus }) {
   const { Icon, label } = STATUS[status];
   const weight = status === 'FAILED' ? 'fill' : 'bold';

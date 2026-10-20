@@ -94,6 +94,10 @@ export function connectEvents({ onEvent, onConnectionChange }: Handlers): () => 
   return () => controller.abort();
 }
 
+/**
+ * Uma conexão: abre o GET /events, lê o corpo aos pedaços e repassa os eventos conhecidos.
+ * Termina quando o servidor fecha (o `connectEvents` reconecta) e lança StreamClosed num 401.
+ */
 async function readStream(signal: AbortSignal, emit: (event: StreamEvent) => void) {
   const token = loadSession()?.token;
   const response = await fetch(`${API_URL}/events`, {
