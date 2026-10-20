@@ -96,10 +96,17 @@ services:
         condition: service_healthy
       postgres-exporter:
         condition: service_started
+    # Ao trocar o command, os dois primeiros flags da imagem precisam ser repetidos
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
     ports:
       - "127.0.0.1:9090:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Histórico das métricas (15 dias); some com docker compose down -v
+      - prometheus_data:/prometheus
 
   # Métricas do Postgres para o Prometheus (porta 9187 só na rede interna). Usa o mesmo usuário do backend
   postgres-exporter:
@@ -114,7 +121,8 @@ services:
       DATA_SOURCE_USER: ${POSTGRES_USER:-postgres}
       DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:-postgres}
 
-  # Datasource, dashboard "BCB" e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos)
+  # Datasource, dashboard "BCB" e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos).
+  # Alertas no Discord: docker-compose.discord.yaml
   grafana:
     image: grafana/grafana:13.2.4
     container_name: bcb-grafana
@@ -130,9 +138,21 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/bcb.json
+      # Endereço usado nos links das notificações (Discord); sem isso saem com a porta interna 3000, que no host é do frontend
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
+    # Montagens separadas, sobre as pastas que a imagem já tem: o override do Discord acrescenta um arquivo em alerting/
     volumes:
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/provisioning/alerting/bcb.yml:/etc/grafana/provisioning/alerting/bcb.yml:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
 volumes:
   db_data:
+  prometheus_data:

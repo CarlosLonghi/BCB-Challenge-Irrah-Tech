@@ -24,10 +24,10 @@ docker compose up --build
 | Swagger | http://localhost:8080/swagger-ui/index.html |
 | RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`). Se o login falhar depois de trocar a versão da imagem (`SESSION_EXPIRY is not defined` no console), recarregue sem cache: Ctrl+Shift+R |
 | PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`, ou os valores do `.env`) |
-| Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d` |
+| Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d`. Guarda 15 dias de histórico num volume |
 | Grafana (opcional) | http://localhost:3001 (`admin` / `admin`, ou os valores do `.env`), no mesmo perfil. Abre direto no dashboard **BCB** |
 
-Para parar e apagar os dados: `docker compose down -v`.
+Para parar e apagar os dados: `docker compose down -v` (apaga também o histórico do Prometheus).
 
 **Volume criado no Postgres 16.** O compose usa o Postgres 18, que monta o volume em `/var/lib/postgresql` e não abre dados da versão 16. Para manter os dados, exporte antes de atualizar (ainda com o 16 rodando) e importe depois:
 
@@ -151,6 +151,7 @@ frontend/   Interface React
 docs/       enunciado e regras do desafio
 observability/   Prometheus e Grafana (datasource, dashboard e alertas) do perfil observability do compose
 docker-compose.yaml
+docker-compose.discord.yaml   override opcional: alertas do Grafana no Discord
 .env.example     credenciais e segredo do compose
 ```
 
@@ -208,8 +209,17 @@ docker-compose.yaml
     - API: requisições, p95 por rota (o histograma HTTP está ligado no `application.properties`), erros por status e logs WARN/ERROR;
     - rotinas agendadas, JVM (heap, CPU, GC) e banco do lado da aplicação (Hikari e repositórios mais lentos);
     - RabbitMQ (mensagens por fila, fluxo, memória e disco do broker) e PostgreSQL (conexões, transações, cache hit, linhas por tabela, seq scan × índice, locks).
-  - Os painéis de mensagem ficam sem dados até o primeiro envio, porque os contadores só passam a existir nele. As consultas filtram por `job`, porque o backend e o broker expõem nomes iguais (`rabbitmq_connections`). Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
-  - Alertas (`observability/grafana/provisioning/alerting/bcb.yml`): backend ou Postgres fora, mensagens na DLQ, p95 de entrega URGENT acima de 15s, taxa de falha acima de 5%, 5xx na API, pool do Hikari saturado e alarme de memória ou disco no RabbitMQ. Eles aparecem em **Alerting** e no topo do dashboard. Não há contact point configurado: para receber por e-mail ou Slack, crie um no Grafana e aponte a política padrão para ele.
+  - As consultas filtram por `job`, porque o backend e o broker expõem nomes iguais (`rabbitmq_connections`). Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
+  - Alertas (`observability/grafana/provisioning/alerting/bcb.yml`): backend ou Postgres fora, mensagens na DLQ, p95 de entrega URGENT acima de 15s, taxa de falha acima de 5%, 5xx na API, pool do Hikari saturado e alarme de memória ou disco no RabbitMQ. Eles aparecem em **Alerting** e no topo do dashboard.
+  - Alertas no Discord (opcional): crie um webhook no canal (Configurações do canal → Integrações → Webhooks), ponha a URL em `GRAFANA_DISCORD_WEBHOOK_URL` no `.env` e suba com o override, que provisiona o contact point e a política (`observability/grafana/discord/discord.yml`):
+
+    ```bash
+    docker compose -f docker-compose.yaml -f docker-compose.discord.yaml --profile observability up -d
+    ```
+
+    O canal recebe o alerta quando ele dispara e de novo quando se resolve, agrupado por regra e repetido a cada 4 horas enquanto continuar ativo. A URL do webhook é segredo: quem tem a URL consegue postar no canal. Sem o override, nada muda.
+  - Os contadores `bcb_messages_*` são registrados zerados para cada prioridade no startup: os painéis mostram 0 em vez de "No data", e o primeiro envio entra nas contas do Prometheus.
+  - O CI (job `observability`) valida o `prometheus.yml` com `promtool` e sobe o Grafana com o override do Discord para conferir dashboard, regras e contact point.
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.

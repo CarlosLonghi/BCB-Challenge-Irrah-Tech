@@ -41,6 +41,11 @@ class ObservabilityIT extends IntegrationTest {
         await().untilAsserted(() -> assertThat(prometheus())
                 .contains("bcb_messages_sent_total{priority=\"URGENT\"}")
                 .contains("bcb_messages_delivery_seconds_count{priority=\"URGENT\"}")
+                // Registrada no startup: existe mesmo sem falha neste teste (o valor depende dos outros ITs,
+                // que dividem o contexto; o zero inicial fica no MessageMetricsTest)
+                .contains("bcb_messages_failed_total{priority=\"NORMAL\"} ")
+                // Histograma do HTTP (management.metrics.distribution.percentiles-histogram.http.server.requests)
+                .contains("http_server_requests_seconds_bucket{")
                 .contains("bcb_queue_messages{queue=\"bcb.messages\"}")
                 .contains("bcb_queue_messages{queue=\"bcb.messages.dlq\"}")
                 .contains("bcb_events_connections"));

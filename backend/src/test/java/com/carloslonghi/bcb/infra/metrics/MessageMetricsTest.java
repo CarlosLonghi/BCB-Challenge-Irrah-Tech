@@ -16,6 +16,17 @@ class MessageMetricsTest {
     private final MessageMetrics metrics = new MessageMetrics(registry);
 
     @Test
+    @DisplayName("registra as métricas zeradas para todas as prioridades na criação")
+    void registersZeroedMetersUpFront() {
+        for (MessagePriority priority : MessagePriority.values()) {
+            String tag = priority.name();
+            assertThat(registry.get("bcb.messages.sent").tag("priority", tag).counter().count()).isZero();
+            assertThat(registry.get("bcb.messages.failed").tag("priority", tag).counter().count()).isZero();
+            assertThat(registry.get("bcb.messages.delivery").tag("priority", tag).timer().count()).isZero();
+        }
+    }
+
+    @Test
     @DisplayName("conta envios e falhas por prioridade")
     void countsByPriority() {
         metrics.sent(MessagePriority.NORMAL);

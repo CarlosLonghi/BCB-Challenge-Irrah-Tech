@@ -67,6 +67,39 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  # Config do Prometheus e provisioning do Grafana (um YAML inválido impede o Grafana de subir)
+  observability:
+    runs-on: ubuntu-latest
+    env:
+      # URL fictícia: só para o override do Discord passar na validação
+      GRAFANA_DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/0/ci
+      COMPOSE_FILE: docker-compose.yaml:docker-compose.discord.yaml
+      COMPOSE_PROFILES: observability
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compose válido (com e sem o override do Discord)
+        run: |
+          docker compose -f docker-compose.yaml config -q
+          docker compose config -q
+
+      - name: promtool check config
+        run: docker compose run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+
+      - name: Grafana sobe com dashboard, alertas e contact point
+        run: |
+          docker compose up -d --no-deps --wait --wait-timeout 120 grafana
+          api() { curl -sf -u admin:admin "http://localhost:3001$1"; }
+          rules=$(api /api/v1/provisioning/alert-rules | jq length)
+          echo "regras: $rules"
+          test "$rules" -ge 8
+          api /api/dashboards/uid/bcb | jq -e '.dashboard.uid == "bcb"'
+          api /api/v1/provisioning/contact-points | jq -e 'any(.[]; .uid == "bcb-discord")'
+
+      - name: Logs do Grafana
+        if: failure()
+        run: docker compose logs --no-color grafana
+
   e2e:
     runs-on: ubuntu-latest
     steps:

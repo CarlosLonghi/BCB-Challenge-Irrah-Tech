@@ -1,5 +1,5 @@
 # Alertas do perfil observability. Aparecem em Alerting e no painel "Alertas disparados" do dashboard BCB.
-# Não há contact point configurado: para receber por e-mail ou Slack, crie um e aponte a política padrão para ele.
+# Sem contact point por padrão. Para receber no Discord, suba com o docker-compose.discord.yaml (ver README).
 apiVersion: 1
 
 groups:
