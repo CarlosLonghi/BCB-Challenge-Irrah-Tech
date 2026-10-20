@@ -25,9 +25,9 @@ docker compose up --build
 | RabbitMQ (painel) | http://localhost:15672 (`guest` / `guest`, ou os valores do `.env`). Se o login falhar depois de trocar a versão da imagem (`SESSION_EXPIRY is not defined` no console), recarregue sem cache: Ctrl+Shift+R |
 | PostgreSQL | `localhost:5432` (banco `bcb`, usuário/senha `postgres`, ou os valores do `.env`) |
 | Prometheus (opcional) | http://localhost:9090, com `docker compose --profile observability up -d`. Guarda 15 dias de histórico num volume |
-| Grafana (opcional) | http://localhost:3001 (`admin` / `admin`, ou os valores do `.env`), no mesmo perfil. Abre direto no dashboard **BCB** |
+| Grafana (opcional) | http://localhost:3001 (`admin` / `admin`, ou os valores do `.env`), no mesmo perfil. Abre direto no dashboard **BCB**; logs em Explore → Loki |
 
-Para parar e apagar os dados: `docker compose down -v` (apaga também o histórico do Prometheus).
+Para parar e apagar os dados: `docker compose down -v` (apaga também o histórico do Prometheus e os logs do Loki).
 
 **Volume criado no Postgres 16.** O compose usa o Postgres 18, que monta o volume em `/var/lib/postgresql` e não abre dados da versão 16. Para manter os dados, exporte antes de atualizar (ainda com o 16 rodando) e importe depois:
 
@@ -148,8 +148,8 @@ gh pr create
 ```
 backend/    API Spring Boot (Java 21, PostgreSQL, RabbitMQ)
 frontend/   Interface React
-docs/       enunciado e regras do desafio
-observability/   Prometheus e Grafana (datasource, dashboard e alertas) do perfil observability do compose
+docs/       enunciado e regras do desafio, e o guia de observabilidade
+observability/   Prometheus, Loki, Alloy e Grafana (datasources, dashboards e alertas) do perfil observability do compose
 docker-compose.yaml
 docker-compose.discord.yaml   override opcional: alertas do Grafana no Discord
 .env.example     credenciais e segredo do compose
@@ -161,7 +161,7 @@ docker-compose.discord.yaml   override opcional: alertas do Grafana no Discord
 - **Testes do backend:** JUnit 5, Mockito, AssertJ, Testcontainers (PostgreSQL e RabbitMQ), Awaitility, JaCoCo
 - **Frontend:** React 19 + TypeScript + Vite, React Router 7, CSS Modules, tipos gerados do OpenAPI (openapi-typescript), Vitest + Testing Library, Playwright, ícones Phosphor; servido por nginx no Docker
 - **Infra:** Docker Compose, GitHub Actions (CI), Dependabot
-- **Operação:** Micrometer + Prometheus + Grafana (com alertas), postgres-exporter e plugin Prometheus do RabbitMQ, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
+- **Operação:** Micrometer + Prometheus + Grafana (com alertas), Loki + Alloy (logs), postgres-exporter e plugin Prometheus do RabbitMQ, Micrometer Tracing (Brave) para correlação de logs, logs JSON (ECS), Bucket4j (rate limit)
 
 ## Funcionalidades
 
@@ -202,15 +202,13 @@ docker-compose.discord.yaml   override opcional: alertas do Grafana no Discord
 - **Observabilidade:**
   - Métricas em `/actuator/prometheus`, na porta de gerência 8081, fora do alcance da rede. Além das do Spring (HTTP, JVM, Hikari, RabbitMQ), há métricas próprias: `bcb_messages_sent_total`, `bcb_messages_delivery_seconds` (da criação até a entrega, por prioridade), `bcb_messages_failed_total`, `bcb_queue_messages` (fila e DLQ) e `bcb_events_connections`.
   - No perfil `observability`, o Prometheus coleta três fontes, todas só na rede interna do compose: o backend (`backend:8081`), o broker RabbitMQ pelo plugin `rabbitmq_prometheus`, que já vem na imagem (`rabbitmq:15692`, agregado e por fila), e o Postgres pelo `postgres-exporter`, que usa o mesmo usuário do backend.
-  - O Grafana já sobe com o dashboard **BCB** (`observability/grafana/dashboards/bcb.json`):
-    - visão geral: backend, Postgres e RabbitMQ no ar e alertas disparados;
-    - mensagens: envios por segundo, latência de entrega p50/p95/p99 por prioridade, falhas e estornos;
-    - fila e worker: fila e DLQ, conexões SSE, tempo de processamento no worker e o cliente AMQP do backend;
-    - API: requisições, p95 por rota (o histograma HTTP está ligado no `application.properties`), erros por status e logs WARN/ERROR;
-    - rotinas agendadas, JVM (heap, CPU, GC) e banco do lado da aplicação (Hikari e repositórios mais lentos);
-    - RabbitMQ (mensagens por fila, fluxo, memória e disco do broker) e PostgreSQL (conexões, transações, cache hit, linhas por tabela, seq scan × índice, locks).
-  - As consultas filtram por `job`, porque o backend e o broker expõem nomes iguais (`rabbitmq_connections`). Para mudar o dashboard, edite na tela, exporte o JSON e substitua o arquivo.
-  - Alertas (`observability/grafana/provisioning/alerting/bcb.yml`): backend ou Postgres fora, mensagens na DLQ, p95 de entrega URGENT acima de 15s, taxa de falha acima de 5%, 5xx na API, pool do Hikari saturado e alarme de memória ou disco no RabbitMQ. Eles aparecem em **Alerting** e no topo do dashboard.
+  - Logs: o Alloy lê o stdout dos containers do projeto e manda ao Loki (15 dias), com os labels `service` e `level`. No Grafana (Explore → Loki ou o painel de logs dos dashboards), clicar no `traceId` de um log mostra todos os logs da mesma requisição, inclusive os do worker.
+  - O Grafana já sobe com quatro dashboards, separados entre o que serve para qualquer projeto e o que é do BCB:
+    - **BCB** (pasta BCB, abre por padrão): serviços no ar, alertas disparados, envios, latência de entrega p50/p95/p99 por prioridade, falhas e estornos, fila e DLQ, conexões SSE e os logs do backend;
+    - **Spring Boot** (pasta Infra): requisições, p95 por rota (o histograma HTTP está ligado no `application.properties`), erros por status, JVM (heap, CPU, GC), Hikari, repositórios mais lentos, rotinas agendadas, cliente AMQP e logs do serviço;
+    - **PostgreSQL** e **RabbitMQ** (pasta Infra): conexões, transações, cache hit, linhas por tabela, seq scan × índice e locks; mensagens por fila, fluxo, memória e disco do broker.
+  - Os dashboards da pasta Infra escolhem o serviço numa variável (`job`) e não citam o BCB. O guia [docs/observabilidade.md](docs/observabilidade.md) explica as convenções e como levar o padrão para outro projeto. Para mudar um dashboard, edite na tela, exporte o JSON e substitua o arquivo.
+  - Alertas: os de infraestrutura (`alerting/generic.yml`, pasta Infra: qualquer alvo do Prometheus fora, Postgres fora, 5xx na API, pool do Hikari saturado e alarme de memória ou disco no RabbitMQ) e os do domínio (`alerting/bcb.yml`: mensagens na DLQ, p95 de entrega URGENT acima de 15s e taxa de falha acima de 5%). Eles aparecem em **Alerting** e no topo do dashboard BCB.
   - Alertas no Discord (opcional): crie um webhook no canal (Configurações do canal → Integrações → Webhooks), ponha a URL em `GRAFANA_DISCORD_WEBHOOK_URL` no `.env` e suba com o override, que provisiona o contact point e a política (`observability/grafana/discord/discord.yml`):
 
     ```bash
@@ -219,7 +217,7 @@ docker-compose.discord.yaml   override opcional: alertas do Grafana no Discord
 
     O canal recebe o alerta quando ele dispara e de novo quando se resolve, agrupado por regra e repetido a cada 4 horas enquanto continuar ativo. A URL do webhook é segredo: quem tem a URL consegue postar no canal. Sem o override, nada muda.
   - Os contadores `bcb_messages_*` são registrados zerados para cada prioridade no startup: os painéis mostram 0 em vez de "No data", e o primeiro envio entra nas contas do Prometheus.
-  - O CI (job `observability`) valida o `prometheus.yml` com `promtool` e sobe o Grafana com o override do Discord para conferir dashboard, regras e contact point.
+  - O CI (job `observability`) valida as configs do Prometheus, do Loki e do Alloy, sobe o Grafana com o override do Discord para conferir dashboards, datasources, regras e contact point, e faz um envio de ponta a ponta para conferir que o log chega ao Loki com o `traceId` da requisição.
   - No compose, os logs saem em JSON (ECS) com `traceId`. O id passa pelos headers da mensagem do RabbitMQ, então a requisição que enviou e o worker que entregou aparecem com o mesmo id.
   - Toda resposta traz `X-Trace-Id`.
 - **Rate limit:** por IP, com token bucket (Bucket4j): `POST /auth` aceita 10 tentativas por minuto e `POST /clients`, 10 por hora. Acima disso, a resposta é 429 com `Retry-After`. Os buckets ficam em memória, o que basta com uma instância. Atrás de um proxy reverso, é preciso ligar `server.forward-headers-strategy` para o limite valer por cliente.

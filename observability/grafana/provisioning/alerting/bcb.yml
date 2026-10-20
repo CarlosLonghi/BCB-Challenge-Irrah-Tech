@@ -1,4 +1,5 @@
-# Alertas do perfil observability. Aparecem em Alerting e no painel "Alertas disparados" do dashboard BCB.
+# Alertas do domínio (mensagens, DLQ, estorno). Os de infraestrutura (alvo fora, 5xx, Hikari, Postgres, RabbitMQ)
+# estão em generic.yml. Aparecem em Alerting e no painel "Alertas disparados" do dashboard BCB.
 # Sem contact point por padrão. Para receber no Discord, suba com o docker-compose.discord.yaml (ver README).
 apiVersion: 1
 
@@ -8,58 +9,6 @@ groups:
     folder: BCB
     interval: 1m
     rules:
-      - uid: bcb-backend-down
-        title: 'Backend fora'
-        condition: B
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: 'up{job="backend"}'
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator: { type: lt, params: [ 1 ] }
-        for: 1m
-        noDataState: Alerting
-        execErrState: Error
-        labels:
-          severity: critical
-        annotations:
-          summary: 'O Prometheus não consegue coletar o backend (backend:8081)'
-      - uid: bcb-postgres-down
-        title: 'Postgres fora'
-        condition: B
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: 'pg_up{job="postgres"}'
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator: { type: lt, params: [ 1 ] }
-        for: 1m
-        noDataState: Alerting
-        execErrState: Error
-        labels:
-          severity: critical
-        annotations:
-          summary: 'O postgres-exporter não consegue conectar no banco'
       - uid: bcb-dlq
         title: 'Mensagens na DLQ'
         condition: B
@@ -138,81 +87,3 @@ groups:
           severity: warning
         annotations:
           summary: 'Mais de 5% das mensagens enviadas nos últimos 10 minutos falharam e foram estornadas'
-      - uid: bcb-http-5xx
-        title: 'Erros 5xx na API'
-        condition: B
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: 'sum(rate(http_server_requests_seconds_count{job="backend", status=~"5.."}[5m]))'
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator: { type: gt, params: [ 0.05 ] }
-        for: 5m
-        noDataState: OK
-        execErrState: Error
-        labels:
-          severity: warning
-        annotations:
-          summary: 'A API está respondendo 5xx (mais de 3 por minuto)'
-      - uid: bcb-hikari-pending
-        title: 'Pool do banco saturado'
-        condition: B
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: 'max(hikaricp_connections_pending{job="backend"})'
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator: { type: gt, params: [ 0 ] }
-        for: 2m
-        noDataState: OK
-        execErrState: Error
-        labels:
-          severity: warning
-        annotations:
-          summary: 'Requisições esperando conexão do Hikari há mais de 2 minutos'
-      - uid: bcb-rabbitmq-alarm
-        title: 'Alarme no RabbitMQ'
-        condition: B
-        data:
-          - refId: A
-            relativeTimeRange: { from: 600, to: 0 }
-            datasourceUid: prometheus
-            model:
-              refId: A
-              instant: true
-              expr: 'max(rabbitmq_alarms_memory_used_watermark{job="rabbitmq"}) + max(rabbitmq_alarms_free_disk_space_watermark{job="rabbitmq"})'
-          - refId: B
-            datasourceUid: __expr__
-            model:
-              refId: B
-              type: threshold
-              expression: A
-              conditions:
-                - evaluator: { type: gt, params: [ 0 ] }
-        for: 1m
-        noDataState: OK
-        execErrState: Error
-        labels:
-          severity: critical
-        annotations:
-          summary: 'Alarme de memória ou disco no broker: publicações bloqueadas'

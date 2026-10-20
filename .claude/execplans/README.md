@@ -10,6 +10,7 @@ _Nenhum._
 
 ## Concluídos
 
+- [2026-10-20-observabilidade-logs-reuso.md](2026-10-20-observabilidade-logs-reuso.md): logs no Loki (Alloy) com link do traceId, dashboards e alertas genéricos separados do domínio, guia de reuso
 - [2026-10-15-zustand-estado-global.md](2026-10-15-zustand-estado-global.md): AuthProvider e AppDataProvider trocados por stores do Zustand
 - [2026-10-14-devops-observabilidade.md](2026-10-14-devops-observabilidade.md): imagens sem root, compose com .env, métricas e tracing, rate limit e Dependabot
 - [2026-10-14-tempo-real-frontend.md](2026-10-14-tempo-real-frontend.md): status por SSE, React 19/react-router 7/RabbitMQ 4, tipos gerados do OpenAPI, testes de tela e E2E
