@@ -13,6 +13,10 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.util.List;
 
+/**
+ * Extrato do cliente (tb_ledger_entries): um DEBIT por envio e um REFUND por mensagem que terminou em FAILED.
+ * O credito inicial do cadastro nao vira lancamento.
+ */
 @Service
 @RequiredArgsConstructor
 public class LedgerService {

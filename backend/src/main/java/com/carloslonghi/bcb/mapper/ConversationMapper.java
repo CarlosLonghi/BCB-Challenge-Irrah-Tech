@@ -5,6 +5,9 @@ import com.carloslonghi.bcb.entity.Conversation;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/**
+ * Conversation -> ConversationResponse. Le so o id do cliente, sem inicializar o proxy LAZY.
+ */
 @Mapper(componentModel = "spring")
 public interface ConversationMapper {
 

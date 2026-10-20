@@ -11,6 +11,11 @@ import org.springframework.context.annotation.Configuration;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * Topologia do RabbitMQ e o destino das mensagens que falham.
+ * Fila principal bcb.messages com prioridade (x-max-priority 10) e DLQ bcb.messages.dlq. Prefetch e retry do
+ * consumidor ficam em spring.rabbitmq.listener.simple.* no application.properties.
+ */
 @Slf4j
 @Configuration
 public class RabbitConfig {

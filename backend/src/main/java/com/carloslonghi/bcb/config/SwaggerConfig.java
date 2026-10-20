@@ -13,6 +13,11 @@ import org.springframework.context.annotation.Configuration;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Documentacao OpenAPI (Swagger UI em /swagger-ui/index.html). As anotacoes de cada rota ficam nas interfaces
+ * de controller/api/spec. O /v3/api-docs gerado e comparado com frontend/openapi.json pelo OpenApiContractIT:
+ * mudou o contrato, regrave o arquivo (ver ARCHITECTURE.md).
+ */
 @Configuration
 @SecurityScheme(
         name = "bearerAuth",

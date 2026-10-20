@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import java.util.EnumMap;
 import java.util.Map;
 
+/**
+ * Contagem de mensagens por status e prioridade para GET /queue/status, somando todos os clientes.
+ * Le do banco, e nao do RabbitMQ: a fila so conhece as mensagens que ainda nao foram consumidas.
+ */
 @Service
 @RequiredArgsConstructor
 public class QueueStatusService {

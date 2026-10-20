@@ -8,6 +8,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Acesso a tb_clients. Quem vai alterar saldo/limite le o cliente por {@link #findWithLockById}.
+ */
 @Repository
 public interface ClientRepository extends JpaRepository<Client, Long> {
     Optional<Client> findByDocument(String document);

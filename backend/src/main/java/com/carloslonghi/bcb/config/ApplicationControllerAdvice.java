@@ -22,8 +22,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.stream.Collectors;
 
-// Erros que nao passam por um controller (ex.: 401 de token ausente ou invalido) seguem pelo
-// /error padrao do Spring Boot, que tem o mesmo formato do ErrorResponse.
+/**
+ * Converte as excecoes lancadas nos controllers e services em ErrorResponse, com o status HTTP de cada caso.
+ * Excecao nova: crie o handler aqui e declare a resposta de erro na interface *Api da rota (o springdoc nao junta
+ * as respostas do advice sozinho).
+ * <p>
+ * Erros que nao passam por um controller (ex.: 401 de token ausente ou invalido, 429 do rate limit, rota
+ * inexistente) seguem pelo /error padrao do Spring Boot, que tem o mesmo formato do ErrorResponse.
+ */
 @RestControllerAdvice
 public class ApplicationControllerAdvice {
 
