@@ -1,0 +1,14 @@
+# Carrega os dashboards de observability/grafana/dashboards, uma pasta do Grafana por subpasta:
+# infra/ (Spring Boot, PostgreSQL, RabbitMQ, reaproveitáveis em outros projetos) e bcb/ (domínio).
+# O JSON do repositório é a fonte da verdade: mudanças feitas pela tela não são salvas
+# (exporte o JSON e atualize o arquivo).
+apiVersion: 1
+
+providers:
+  - name: dashboards
+    type: file
+    allowUiUpdates: false
+    disableDeletion: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

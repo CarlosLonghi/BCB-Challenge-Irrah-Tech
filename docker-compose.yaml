@@ -84,7 +84,8 @@ services:
     ports:
       - "3000:8080"   # build estático servido por nginx sem root
 
-  # Opcional: docker compose --profile observability up -d → Prometheus em :9090 e Grafana em :3001
+  # Opcional: docker compose --profile observability up -d → Prometheus em :9090, Grafana em :3001 e logs no Loki.
+  # Guia do padrão (e como levar para outro projeto): docs/observabilidade.md
   prometheus:
     image: prom/prometheus:v3.15.0
     container_name: bcb-prometheus
@@ -121,7 +122,33 @@ services:
       DATA_SOURCE_USER: ${POSTGRES_USER:-postgres}
       DATA_SOURCE_PASS: ${POSTGRES_PASSWORD:-postgres}
 
-  # Datasource, dashboard "BCB" e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos).
+  # Logs dos containers (Loki monolítico; porta 3100 só na rede interna). 15 dias no volume loki_data
+  loki:
+    image: grafana/loki:3.7.8
+    container_name: bcb-loki
+    profiles: [ observability ]
+    command: [ "-config.file=/etc/loki/loki.yml" ]
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    # Sem healthcheck: a imagem é distroless (sem wget/curl). O Alloy reenvia o que falhar enquanto o Loki sobe
+
+  # Lê os logs dos containers deste projeto pelo socket do Docker (só leitura) e manda para o Loki
+  alloy:
+    image: grafana/alloy:v1.20.1
+    container_name: bcb-alloy
+    profiles: [ observability ]
+    depends_on:
+      - loki
+    command: [ "run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy" ]
+    environment:
+      # Filtra os containers pelo label com.docker.compose.project
+      COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME}
+    volumes:
+      - ./observability/alloy.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # Datasources, dashboards e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos).
   # Alertas no Discord: docker-compose.discord.yaml
   grafana:
     image: grafana/grafana:13.2.4
@@ -129,6 +156,7 @@ services:
     profiles: [ observability ]
     depends_on:
       - prometheus
+      - loki
     ports:
       - "127.0.0.1:3001:3000"   # a 3000 do host é do frontend
     environment:
@@ -137,13 +165,14 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/bcb.json
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/bcb/bcb.json
       # Endereço usado nos links das notificações (Discord); sem isso saem com a porta interna 3000, que no host é do frontend
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
     # Montagens separadas, sobre as pastas que a imagem já tem: o override do Discord acrescenta um arquivo em alerting/
     volumes:
       - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/provisioning/alerting/generic.yml:/etc/grafana/provisioning/alerting/generic.yml:ro
       - ./observability/grafana/provisioning/alerting/bcb.yml:/etc/grafana/provisioning/alerting/bcb.yml:ro
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     healthcheck:
@@ -156,3 +185,4 @@ services:
 volumes:
   db_data:
   prometheus_data:
+  loki_data:

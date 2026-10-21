@@ -1,0 +1,43 @@
+# Loki monolítico para o perfil observability: um processo, dados em disco no volume loki_data.
+# Recebe os logs do Alloy (observability/alloy.alloy) e é lido pelo Grafana. Porta 3100 só na rede interna.
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+
+schema_config:
+  configs:
+    - from: 2026-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Igual ao Prometheus (--storage.tsdb.retention.time=15d)
+  retention_period: 360h
+  allow_structured_metadata: true
+  # Sem o label service_name automático: o Alloy já manda service
+  discover_service_name: []
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+
+analytics:
+  reporting_enabled: false

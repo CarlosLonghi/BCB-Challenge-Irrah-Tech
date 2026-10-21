@@ -83,22 +83,49 @@ jobs:
           docker compose -f docker-compose.yaml config -q
           docker compose config -q
 
-      - name: promtool check config
-        run: docker compose run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+      - name: Configs do Prometheus, Loki e Alloy
+        run: |
+          docker compose run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+          docker compose run --rm --no-deps loki -config.file=/etc/loki/loki.yml -verify-config
+          docker compose run --rm --no-deps alloy fmt /etc/alloy/config.alloy > /dev/null
 
-      - name: Grafana sobe com dashboard, alertas e contact point
+      - name: Grafana sobe com dashboards, datasources, alertas e contact point
         run: |
           docker compose up -d --no-deps --wait --wait-timeout 120 grafana
           api() { curl -sf -u admin:admin "http://localhost:3001$1"; }
           rules=$(api /api/v1/provisioning/alert-rules | jq length)
           echo "regras: $rules"
           test "$rules" -ge 8
-          api /api/dashboards/uid/bcb | jq -e '.dashboard.uid == "bcb"'
+          for uid in bcb spring-boot postgres rabbitmq; do
+            api "/api/dashboards/uid/$uid" | jq -e --arg uid "$uid" '.dashboard.uid == $uid'
+          done
+          api /api/datasources/uid/loki | jq -e '.type == "loki"'
           api /api/v1/provisioning/contact-points | jq -e 'any(.[]; .uid == "bcb-discord")'
 
-      - name: Logs do Grafana
+      # Ponta a ponta: um envio gera os logs "enfileirada" (requisição) e "entregue" (worker) com o traceId
+      # devolvido em X-Trace-Id, e o Alloy os leva ao Loki, consultado pelo Grafana
+      - name: Logs chegam ao Loki com o traceId da requisição
+        run: |
+          docker compose up -d --build --wait --wait-timeout 300 backend prometheus postgres-exporter loki alloy grafana
+          json='Content-Type: application/json'
+          curl -sf -X POST localhost:8080/clients -H "$json" -d '{"name":"CI","document":"52998224725","password":"senha-ci-123","documentType":"CPF","planType":"PRE_PAID","balance":5,"limit":0,"active":true}' > /dev/null
+          token=$(curl -sf -X POST localhost:8080/auth -H "$json" -d '{"document":"52998224725","password":"senha-ci-123"}' | jq -r .token)
+          trace=$(curl -sf -D - -o /dev/null -X POST localhost:8080/messages -H "$json" -H "Authorization: Bearer $token" \
+            -d '{"recipientId":1,"recipientName":"CI","content":"oi","priority":"URGENT"}' | tr -d '\r' | awk -F': ' 'tolower($1)=="x-trace-id"{print $2}')
+          echo "traceId: $trace"
+          test -n "$trace"
+          for i in $(seq 1 30); do
+            lines=$(curl -sf -u admin:admin -G http://localhost:3001/api/datasources/proxy/uid/loki/loki/api/v1/query_range \
+              --data-urlencode "query={service=\"backend\"} |= \"$trace\"" | jq '[.data.result[].values[]] | length')
+            echo "linhas com o traceId: $lines"
+            [ "${lines:-0}" -ge 1 ] && exit 0
+            sleep 5
+          done
+          exit 1
+
+      - name: Logs do Grafana, Loki e Alloy
         if: failure()
-        run: docker compose logs --no-color grafana
+        run: docker compose logs --no-color grafana loki alloy
 
   e2e:
     runs-on: ubuntu-latest

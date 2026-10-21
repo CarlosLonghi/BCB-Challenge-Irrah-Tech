@@ -1,0 +1,143 @@
+# Alertas genéricos de infraestrutura, sem nada do domínio: servem para qualquer projeto com o mesmo padrão
+# (ver docs/observabilidade.md). Cada regra agrupa por job, então um alerta por serviço afetado.
+# Os do domínio ficam em bcb.yml. Sem contact point por padrão; Discord pelo docker-compose.discord.yaml.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: infra
+    folder: Infra
+    interval: 1m
+    rules:
+      # Qualquer alvo do prometheus.yml (aplicação, broker, exporters) que deixou de responder
+      - uid: infra-target-down
+        title: 'Alvo fora'
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'min by (job) (up)'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [ 1 ] }
+        for: 1m
+        noDataState: Alerting
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: 'O Prometheus não consegue coletar o job {{ $labels.job }}'
+      # O exporter responde, mas não conecta no banco
+      - uid: infra-postgres-down
+        title: 'Postgres fora'
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'min by (job) (pg_up)'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [ 1 ] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: 'O exporter {{ $labels.job }} não consegue conectar no banco'
+      - uid: infra-http-5xx
+        title: 'Erros 5xx na API'
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'sum by (job) (rate(http_server_requests_seconds_count{status=~"5.."}[5m]))'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [ 0.05 ] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: 'O serviço {{ $labels.job }} está respondendo 5xx (mais de 3 por minuto)'
+      - uid: infra-hikari-pending
+        title: 'Pool do banco saturado'
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'max by (job) (hikaricp_connections_pending)'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [ 0 ] }
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: 'Requisições do serviço {{ $labels.job }} esperando conexão do Hikari há mais de 2 minutos'
+      - uid: infra-rabbitmq-alarm
+        title: 'Alarme no RabbitMQ'
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: 'max by (job) (rabbitmq_alarms_memory_used_watermark) + max by (job) (rabbitmq_alarms_free_disk_space_watermark)'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [ 0 ] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: 'Alarme de memória ou disco no broker {{ $labels.job }}: publicações bloqueadas'

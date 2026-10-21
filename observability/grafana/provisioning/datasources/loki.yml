@@ -1,0 +1,20 @@
+# Loki do compose (logs dos containers, coletados pelo Alloy). O uid fixo é o que os dashboards referenciam.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      # traceId vira link: abre todos os logs da mesma requisição, inclusive os do worker.
+      # $$ escapa o $: o Grafana troca ${...} por variáveis de ambiente ao ler o provisioning
+      derivedFields:
+        - name: traceId
+          matcherRegex: '"traceId":"(\w+)"'
+          datasourceUid: loki
+          url: '{service=~".+"} |= "$${__value.raw}"'
+          urlDisplayLabel: 'Logs deste trace'

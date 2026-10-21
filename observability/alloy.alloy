@@ -1,0 +1,51 @@
+// Coleta os logs dos containers deste compose pelo socket do Docker e manda para o Loki.
+// Labels (poucos, para o Loki indexar barato): service (nome do serviço no compose) e level (ERROR, WARN...).
+// O resto, como o traceId, fica no corpo da linha e é filtrado na consulta: {service="backend"} |= "<traceId>".
+
+// Só os containers do mesmo projeto do compose que subiu o Alloy (COMPOSE_PROJECT vem do compose)
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=" + sys.env("COMPOSE_PROJECT")]
+  }
+}
+
+// Aplicadas pelo loki.source.docker (relabel_rules), que ainda precisa dos labels __meta_docker_*
+// para achar cada container
+discovery.relabel "compose" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.compose.rules
+  forward_to    = [loki.process.levels.receiver]
+}
+
+// Logs JSON (ECS do Spring Boot) trazem o nível em {"log":{"level":...}}; os de texto
+// (nginx, Postgres) ficam sem level
+loki.process "levels" {
+  stage.json {
+    expressions = { level = "log.level" }
+  }
+
+  stage.labels {
+    values = { level = "" }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
