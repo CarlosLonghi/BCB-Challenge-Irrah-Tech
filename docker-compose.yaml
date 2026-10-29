@@ -87,7 +87,7 @@ services:
   # Opcional: docker compose --profile observability up -d → Prometheus em :9090, Grafana em :3001 e logs no Loki.
   # Guia do padrão (e como levar para outro projeto): docs/observabilidade.md
   prometheus:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.15.1
     container_name: bcb-prometheus
     profiles: [ observability ]
     depends_on:
