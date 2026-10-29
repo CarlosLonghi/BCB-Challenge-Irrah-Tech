@@ -135,7 +135,7 @@ services:
 
   # Lê os logs dos containers deste projeto pelo socket do Docker (só leitura) e manda para o Loki
   alloy:
-    image: grafana/alloy:v1.20.1
+    image: grafana/alloy:v1.21.2
     container_name: bcb-alloy
     profiles: [ observability ]
     depends_on:
