@@ -124,7 +124,7 @@ services:
 
   # Logs dos containers (Loki monolítico; porta 3100 só na rede interna). 15 dias no volume loki_data
   loki:
-    image: grafana/loki:3.7.8
+    image: grafana/loki:3.7.9
     container_name: bcb-loki
     profiles: [ observability ]
     command: [ "-config.file=/etc/loki/loki.yml" ]
