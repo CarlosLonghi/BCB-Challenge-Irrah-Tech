@@ -151,7 +151,7 @@ services:
   # Datasources, dashboards e alertas provisionados de observability/grafana (sem volume: tudo vem dos arquivos).
   # Alertas no Discord: docker-compose.discord.yaml
   grafana:
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     container_name: bcb-grafana
     profiles: [ observability ]
     depends_on:
