@@ -111,7 +111,7 @@ services:
 
   # Métricas do Postgres para o Prometheus (porta 9187 só na rede interna). Usa o mesmo usuário do backend
   postgres-exporter:
-    image: prometheuscommunity/postgres-exporter:v0.20.1
+    image: prometheuscommunity/postgres-exporter:v0.21.1
     container_name: bcb-postgres-exporter
     profiles: [ observability ]
     depends_on:
